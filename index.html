@@ -95,7 +95,7 @@ var S={
   pinStep:false,pendingUser:null,pin:"",pinError:false,
   showTE:false,teamEdit:{},
   viewMonth:nowMonth(), // 현재 보고있는 월
-  bankText:"",parseResult:null,isParsing:false,
+  
   manualEdit:null,manualAmt:"",
   showAddMem:false,newMemName:"",confirmDel:null,
   attView:null,
@@ -300,22 +300,8 @@ function bD(w){
   // 납부 현황
   w.appendChild(dv("card",'<div style="display:flex;justify-content:space-between;margin-bottom:6px"><span style="font-size:13px;color:#ffffff80">'+monthLabel(vm)+' 납부 현황</span><span style="font-size:13px;font-weight:700;color:#00d4aa">'+pc+'/'+S.members.length+'명</span></div><div style="background:#ffffff15;border-radius:99px;height:8px;overflow:hidden"><div style="width:'+pct+'%;height:100%;background:linear-gradient(90deg,#00d4aa,#0066ff);border-radius:99px"></div></div><div style="margin-top:8px;font-size:12px;color:#ffffff40">수령 '+tp.toLocaleString()+'원 / 목표 '+td.toLocaleString()+'원</div>'));
 
-  // AI 파싱 (관리자 + 이번달만)
-  if(isA&&vm==nowMonth()){
-    var ai=dv("card","<div style='font-size:13px;font-weight:700;margin-bottom:8px'>📋 카카오뱅크 내역 붙여넣기</div>");
-    var ta=document.createElement("textarea");ta.className="inp";ta.style.cssText="min-height:100px;resize:none";ta.placeholder="카카오뱅크 입금 내역\n예) 03/24 김민형 +30,000원";ta.value=S.bankText;ta.oninput=function(){S.bankText=this.value;};ai.appendChild(ta);
-    var pb=mk("button",S.isParsing?"분석 중...":"자동 파싱하기");pb.className="bp";pb.style.cssText="width:100%;margin-top:8px";pb.disabled=S.isParsing||!S.bankText.trim();pb.style.opacity=(S.isParsing||!S.bankText.trim())?0.5:1;pb.onclick=doParse;ai.appendChild(pb);
-    if(S.parseResult=="error")ai.appendChild(dv("","<div style='margin-top:10px;padding:10px;background:#ff444420;border-radius:10px;font-size:12px;color:#ff8080'>파싱 실패.</div>"));
-    if(S.parseResult&&S.parseResult!="error"){
-      var ph=dv("","<div style='font-size:12px;color:#00d4aa;font-weight:700;margin:10px 0 8px'>✅ 인식된 입금 내역</div>");
-      S.parseResult.forEach(function(p){ph.innerHTML+='<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #ffffff10;font-size:13px"><span>'+p.name+'</span><span style="color:#00d4aa">'+p.amount.toLocaleString()+'원</span></div>';});
-      var apb=mk("button","납부 반영하기");cs(apb,"margin-top:10px;width:100%;background:#00d4aa;border:none;border-radius:10px;padding:10px;color:#0a0a0f;font-weight:900;font-size:13px;cursor:pointer");apb.onclick=doApply;ph.appendChild(apb);ai.appendChild(ph);
-    }
-    w.appendChild(ai);
-  } else if(isA&&vm!=nowMonth()){
-    w.appendChild(dv("lock","📅 과거 내역은 수동으로만 수정할 수 있어요"));
-  } else {
-    w.appendChild(dv("lock","🔒 회비 파싱은 관리자만 사용할 수 있어요"));
+  if(!isA){
+    w.appendChild(dv("lock","🔒 회비 수정은 관리자만 가능해요"));
   }
 
   // 멤버별 납부 현황 + 월별 이력
@@ -364,12 +350,12 @@ function bD(w){
       ["","부상","휴식"].forEach(function(st){
         var stb=mk("button",st||"정상");var cur=m.status||"";
         cs(stb,"padding:4px 10px;border-radius:20px;font-size:11px;font-weight:700;cursor:pointer;border:1px solid;"+(cur==st?"background:#00d4aa;color:#0a0a0f;border-color:#00d4aa":"background:transparent;color:#ffffff80;border-color:#ffffff30"));
-        stb.onclick=(function(mid,sv){return function(){S.members=S.members.map(function(x){return x.id==mid?Object.assign({},x,{status:sv}):x;});al(gn(mid)+" 상태:"+(sv||"정상"));rC();fp("/members/"+mid,{status:sv});};})(m.id,st);
+        stb.onclick=(function(mid,sv,cur){return function(){if(sv==cur)return;S.members=S.members.map(function(x){return x.id==mid?Object.assign({},x,{status:sv}):x;});al(gn(mid)+" 상태 변경: "+(sv||"정상"));rC();fp("/members/"+mid,{status:sv});};})(m.id,st,m.status||'');
         stRow.appendChild(stb);
       });
       var stci=document.createElement("input");stci.className="inp";stci.style.cssText="margin-top:6px;font-size:12px";stci.placeholder="직접입력(예:출장)";stci.value=(m.status&&m.status!="부상"&&m.status!="휴식")?m.status:"";
       var stcsb=mk("button","적용");cs(stcsb,"margin-top:6px;background:#ffffff20;border:none;border-radius:8px;padding:6px 10px;color:#fff;font-size:12px;cursor:pointer");
-      stcsb.onclick=(function(mid,inp){return function(){var sv=inp.value.trim();S.members=S.members.map(function(x){return x.id==mid?Object.assign({},x,{status:sv}):x;});al(gn(mid)+" 상태:"+(sv||"정상"));rC();fp("/members/"+mid,{status:sv});};})(m.id,stci);
+      stcsb.onclick=(function(mid,inp,cur){return function(){var sv=inp.value.trim();if(sv==cur)return;S.members=S.members.map(function(x){return x.id==mid?Object.assign({},x,{status:sv}):x;});al(gn(mid)+" 상태 변경: "+(sv||"정상"));rC();fp("/members/"+mid,{status:sv});};})(m.id,stci,m.status||'');
       row.appendChild(stRow);row.appendChild(stci);row.appendChild(stcsb);
     }
     lc.appendChild(row);
@@ -377,36 +363,21 @@ function bD(w){
   w.appendChild(lc);
 }
 
-function doParse(){
-  S.isParsing=true;S.parseResult=null;rC();
-  fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:1000,messages:[{role:"user",content:"카카오뱅크 입금 내역에서 이름과 금액만 추출해줘.\nJSON 배열만 응답. [{\"name\":\"홍길동\",\"amount\":30000}]\n\n"+S.bankText}]})})
-  .then(function(r){return r.json();})
-  .then(function(data){var text=(data.content||[]).map(function(c){return c.text||"";}).join("");S.parseResult=JSON.parse(text.split("```json").join("").split("```").join("").trim());S.isParsing=false;rC();})
-  .catch(function(){S.parseResult="error";S.isParsing=false;rC();});
-}
 
-function doApply(){
-  if(!S.parseResult||S.parseResult=="error")return;
-  var vm=S.viewMonth;
-  var newDues=Object.assign({},mDues(vm));
-  S.members.forEach(function(m){
-    var f=S.parseResult.find(function(p){return m.name.indexOf(p.name)>=0||p.name.indexOf(m.name)>=0;});
-    if(f){newDues[m.id]={paid:true,amount:f.amount};}
-  });
-  S.dues[vm]=newDues;
-  fs("/dues/"+vm,newDues);
-  S.parseResult.forEach(function(p){al(p.name+"님 "+vm+" 회비 "+p.amount.toLocaleString()+"원 ✅");});
-  S.parseResult=null;S.bankText="";rC();
-}
 
 function doManual(id){
   var amt=parseInt(S.manualAmt);if(isNaN(amt)||amt<0)return;
   var vm=S.viewMonth;
+  var prev=mAmt(vm,id);
+  var prevPaid=mPaid(vm,id);
+  // 실제로 변경된 경우에만 저장 및 로그
+  if(amt==prev&&(amt>0)==prevPaid){S.manualEdit=null;S.manualAmt="";rC();return;}
   var newDues=Object.assign({},mDues(vm));
   newDues[id]={paid:amt>0,amount:amt};
   S.dues[vm]=newDues;
-  fp("/dues/"+vm,{[id]:{paid:amt>0,amount:amt}});
-  al(gn(id)+" "+vm+" 회비 "+(amt>0?"납부 ✅":"취소"));
+  var o={};o[id]={paid:amt>0,amount:amt};
+  fp("/dues/"+vm,o);
+  al(gn(id)+" "+monthLabel(vm)+" 회비 "+(amt>0?amt.toLocaleString()+"원 납부 ✅":"미납 처리"));
   S.manualEdit=null;S.manualAmt="";rC();
 }
 
