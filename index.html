@@ -25,7 +25,7 @@ const ADMIN_ID = 1;
 const ADMIN_PW = "1886";
 const SK_DATA  = "nfc_data_v4";
 const SK_USER  = "nfc_user_v4";
-const DUE_AMT  = 30000;
+const DUE_AMT  = 20000;
 const SIZES    = ["XS","S","M","L","XL","XXL","3XL"];
 
 function getMonths(n=5){
@@ -274,7 +274,7 @@ function App(){
                       <div style={{background:"#333",borderRadius:99,height:6,overflow:"hidden",marginBottom:8}}>
                         <div style={{width:`${members.length?pc/members.length*100:0}%`,height:"100%",background:`linear-gradient(90deg,${C.teal},${C.blue})`,borderRadius:99}}/>
                       </div>
-                      <div style={{fontSize:12,color:C.sub}}>수령 {tp.toLocaleString()}원 / 목표 {(members.length*DUE_AMT).toLocaleString()}원</div>
+                      
                     </div>
                   );
                 })()}
