@@ -7,6 +7,8 @@
   <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&display=swap" rel="stylesheet"/>
   <style>
     *{margin:0;padding:0;box-sizing:border-box;}
@@ -21,9 +23,21 @@
 <script type="text/babel">
 const {useState,useEffect,useRef} = React;
 
+if (!firebase.apps.length) {
+  firebase.initializeApp({
+    apiKey: "AIzaSyAO44jFDdSij4H8wLkGXBUsGYMRrThXk8g",
+    authDomain: "ninetyz-fc.firebaseapp.com",
+    databaseURL: "https://ninetyz-fc-default-rtdb.asia-southeast1.firebasedatabase.app",
+    projectId: "ninetyz-fc",
+    storageBucket: "ninetyz-fc.firebasestorage.app",
+    messagingSenderId: "633669623460",
+    appId: "1:633669623460:web:ee844f91ea29c0ffb09031"
+  });
+}
+const db = firebase.database();
+
 const ADMIN_ID = 1;
 const ADMIN_PW = "1886";
-const SK_DATA  = "nfc_data_v4";
 const SK_USER  = "nfc_user_v4";
 const DUE_AMT  = 20000;
 const SIZES    = ["XS","S","M","L","XL","XXL","3XL"];
@@ -40,15 +54,15 @@ const MONTHS=getMonths(5);
 function mLabel(m){const[y,mo]=m.split("-");return `${y}년 ${+mo}월`;}
 
 const INIT_MEMBERS=[
-  {id:1, name:"김민형",status:"정상",customStatus:"",uniform:null},
-  {id:2, name:"강희관",status:"정상",customStatus:"",uniform:null},
-  {id:3, name:"곽종현",status:"정상",customStatus:"",uniform:null},
-  {id:4, name:"김성준",status:"정상",customStatus:"",uniform:null},
-  {id:5, name:"김재민",status:"정상",customStatus:"",uniform:null},
-  {id:6, name:"김효태",status:"정상",customStatus:"",uniform:null},
-  {id:7, name:"배성록",status:"정상",customStatus:"",uniform:null},
-  {id:8, name:"오성택",status:"정상",customStatus:"",uniform:null},
-  {id:9, name:"유세원",status:"정상",customStatus:"",uniform:null},
+  {id:1,name:"김민형",status:"정상",customStatus:"",uniform:null},
+  {id:2,name:"강희관",status:"정상",customStatus:"",uniform:null},
+  {id:3,name:"곽종현",status:"정상",customStatus:"",uniform:null},
+  {id:4,name:"김성준",status:"정상",customStatus:"",uniform:null},
+  {id:5,name:"김재민",status:"정상",customStatus:"",uniform:null},
+  {id:6,name:"김효태",status:"정상",customStatus:"",uniform:null},
+  {id:7,name:"배성록",status:"정상",customStatus:"",uniform:null},
+  {id:8,name:"오성택",status:"정상",customStatus:"",uniform:null},
+  {id:9,name:"유세원",status:"정상",customStatus:"",uniform:null},
   {id:10,name:"윤준범",status:"정상",customStatus:"",uniform:null},
   {id:11,name:"이원준",status:"정상",customStatus:"",uniform:null},
   {id:12,name:"이정기",status:"정상",customStatus:"",uniform:null},
@@ -64,7 +78,8 @@ function initDues(members){
   MONTHS.forEach(m=>{d[m]={};members.forEach(mb=>{d[m][mb.id]={paid:false,amount:0};});});
   return d;
 }
-function load(key){try{const s=localStorage.getItem(key);return s?JSON.parse(s):null;}catch(e){return null;}}
+function toArr(val){if(!val)return[];if(Array.isArray(val))return val.filter(Boolean);return Object.values(val).filter(Boolean);}
+function loadUser(){try{const s=localStorage.getItem(SK_USER);return s?JSON.parse(s):null;}catch(e){return null;}}
 
 const C={bg:"#111",card:"#1a1a1a",card2:"#222",teal:"#00d4a0",blue:"#0088ff",red:"#e05555",yellow:"#e0a030",border:"#2a2a2a",sub:"#888",dim:"#555"};
 
@@ -74,25 +89,22 @@ function StatusBadge({status}){
 }
 
 function App(){
-  const saved=load(SK_DATA);
-  const [members,setMembers]=useState(saved?.members||INIT_MEMBERS);
-  const [dues,setDues]=useState(saved?.dues||initDues(INIT_MEMBERS));
-  const [matches,setMatches]=useState(saved?.matches||[]);
-  const [notices,setNotices]=useState(saved?.notices||[
-    {id:1,content:"경기 시작 10분 전까지 구장에 도착하지 않으면, 벌금 5천원이다.",author:"김민형",time:"방금 전"},
-    {id:2,content:"회비는 매월 1일 2만원이다.",author:"김민형",time:"방금 전"},
-  ]);
-  const [chat,setChat]=useState(saved?.chat||[]);
-  const [activity,setActivity]=useState(saved?.activity||[]);
+  const [loading,setLoading]=useState(true);
+  const [members,setMembers]=useState([]);
+  const [dues,setDues]=useState({});
+  const [matches,setMatches]=useState([]);
+  const [notices,setNotices]=useState([]);
+  const [chat,setChat]=useState([]);
+  const [activity,setActivity]=useState([]);
 
-  const [user,setUser]=useState(load(SK_USER)||null);
+  const [user,setUser]=useState(loadUser());
   const [pwModal,setPwModal]=useState(false);
   const [pwInput,setPwInput]=useState("");
   const [pwErr,setPwErr]=useState(false);
   const [pendId,setPendId]=useState(null);
 
   const [tab,setTab]=useState("home");
-  const [manTab,setManTab]=useState("dues"); // dues | uniform | team
+  const [manTab,setManTab]=useState("dues");
   const [dueMonth,setDueMonth]=useState(MONTHS[0]);
   const [editDue,setEditDue]=useState(null);
   const [editAmt,setEditAmt]=useState("");
@@ -107,15 +119,67 @@ function App(){
   const [addMember,setAddMember]=useState(false);
   const [newMemberName,setNewMemberName]=useState("");
   const chatEndRef=useRef(null);
+  const actRef=useRef([]);
 
   const isAdmin=user?.isAdmin===true;
   const myId=user?.id;
 
-  useEffect(()=>{try{localStorage.setItem(SK_DATA,JSON.stringify({members,dues,matches,notices,chat,activity}));}catch(e){}},[members,dues,matches,notices,chat,activity]);
-  useEffect(()=>{try{if(user)localStorage.setItem(SK_USER,JSON.stringify(user));else localStorage.removeItem(SK_USER);}catch(e){}},[user]);
-  useEffect(()=>{if(tab==="chat")chatEndRef.current?.scrollIntoView({behavior:"smooth"});},[chat,tab]);
+  // Firebase 리스너 설정
+  useEffect(()=>{
+    let loaded={members:false,dues:false,matches:false,notices:false,chat:false,actLog:false};
+    function checkDone(){if(Object.values(loaded).every(Boolean))setLoading(false);}
 
-  function addLog(msg){setActivity(p=>[{id:Date.now(),msg,time:"방금 전"},...p.slice(0,19)]);}
+    db.ref("members").on("value",snap=>{
+      const val=snap.val();
+      if(val){const arr=toArr(val);setMembers(arr);}
+      else db.ref("members").set(INIT_MEMBERS);
+      loaded.members=true;checkDone();
+    });
+    db.ref("dues").on("value",snap=>{
+      const val=snap.val();
+      if(val){setDues(val);}
+      else db.ref("dues").set(initDues(INIT_MEMBERS));
+      loaded.dues=true;checkDone();
+    });
+    db.ref("matches").on("value",snap=>{
+      const val=snap.val();
+      setMatches(val?toArr(val):[]);
+      loaded.matches=true;checkDone();
+    });
+    db.ref("notices").on("value",snap=>{
+      const val=snap.val();
+      setNotices(val?toArr(val):[]);
+      loaded.notices=true;checkDone();
+    });
+    db.ref("chat").on("value",snap=>{
+      const val=snap.val();
+      setChat(val?toArr(val):[]);
+      loaded.chat=true;checkDone();
+    });
+    db.ref("actLog").on("value",snap=>{
+      const val=snap.val();
+      const arr=val?toArr(val):[];
+      setActivity(arr);
+      actRef.current=arr;
+      loaded.actLog=true;checkDone();
+    });
+    return()=>{
+      ["members","dues","matches","notices","chat","actLog"].forEach(k=>db.ref(k).off());
+    };
+  },[]);
+
+  useEffect(()=>{try{if(user)localStorage.setItem(SK_USER,JSON.stringify(user));else localStorage.removeItem(SK_USER);}catch(e){}},[user]);
+  useEffect(()=>{if(tab==="chat")setTimeout(()=>chatEndRef.current?.scrollIntoView({behavior:"smooth"}),100);},[chat,tab]);
+
+  function addLog(msg){
+    const entry={id:Date.now(),msg,time:"방금 전"};
+    db.ref("actLog").set([entry,...actRef.current.slice(0,19)]);
+  }
+  function fbMembers(arr){db.ref("members").set(arr);}
+  function fbDues(d){db.ref("dues").set(d);}
+  function fbMatches(arr){db.ref("matches").set(arr);}
+  function fbNotices(arr){db.ref("notices").set(arr);}
+
   function selectMember(m){
     if(m.id===ADMIN_ID){setPendId(m.id);setPwModal(true);setPwInput("");setPwErr(false);}
     else setUser({id:m.id,name:m.name,isAdmin:false});
@@ -130,10 +194,10 @@ function App(){
 
   const thisMonth=MONTHS[0];
   const thisDues=dues[thisMonth]||{};
-  const paidCount=Object.values(thisDues).filter(d=>d.paid).length;
-  const totalPaid=Object.values(thisDues).reduce((s,d)=>s+(d.paid?d.amount:0),0);
+  const paidCount=Object.values(thisDues).filter(d=>d&&d.paid).length;
+  const totalPaid=Object.values(thisDues).reduce((s,d)=>s+(d&&d.paid?d.amount:0),0);
   const uniformCount=members.filter(m=>m.uniform).length;
-  const nextMatch=matches.filter(m=>!m.result).sort((a,b)=>a.date.localeCompare(b.date))[0];
+  const nextMatch=[...matches].filter(m=>!m.result).sort((a,b)=>a.date.localeCompare(b.date))[0];
   const RC={win:C.teal,lose:C.red,draw:C.yellow};
   const RL={win:"승",lose:"패",draw:"무"};
 
@@ -142,14 +206,23 @@ function App(){
   const btnG={background:C.card2,border:`1px solid ${C.border}`,borderRadius:12,padding:"10px",color:"#ccc",fontWeight:600,fontSize:13,cursor:"pointer",flex:1};
 
   const tabs=[
-    {key:"home", label:"홈",  icon:"⚽"},
+    {key:"home",label:"홈",icon:"⚽"},
     {key:"manage",label:"관리",icon:"📋"},
     {key:"match",label:"경기",icon:"📅"},
     {key:"notice",label:"공지",icon:"📢"},
-    {key:"chat", label:"대화",icon:"💬"},
+    {key:"chat",label:"대화",icon:"💬"},
   ];
 
-  // ── 로그인 전 ──
+  // 로딩 화면
+  if(loading) return(
+    <div style={{background:C.bg,minHeight:"100vh",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:16}}>
+      <div style={{width:64,height:64,borderRadius:"50%",background:`linear-gradient(135deg,${C.teal},${C.blue})`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:32}}>⚽</div>
+      <div style={{fontSize:20,fontWeight:900}}>Ninetyz FC</div>
+      <div style={{fontSize:13,color:C.sub}}>데이터 불러오는 중...</div>
+    </div>
+  );
+
+  // 로그인 전
   if(!user) return(
     <div style={{background:C.bg,minHeight:"100vh",padding:24,maxWidth:480,margin:"0 auto"}}>
       {pwModal&&(
@@ -178,25 +251,23 @@ function App(){
             style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:14,padding:"14px 8px",color:"#fff",cursor:"pointer",fontFamily:"inherit",textAlign:"center"}}>
             <div style={{fontSize:13,fontWeight:700}}>{m.name}</div>
             {m.id===ADMIN_ID&&<div style={{fontSize:10,color:C.teal,marginTop:3}}>🔐 관리자</div>}
-            {m.status!=="정상"&&<div style={{fontSize:10,color:m.status==="부상"?C.red:C.yellow,marginTop:3}}>{m.status}</div>}
+            {m.status&&m.status!=="정상"&&<div style={{fontSize:10,color:m.status==="부상"?C.red:C.yellow,marginTop:3}}>{m.status}</div>}
           </button>
         ))}
       </div>
     </div>
   );
 
-  // ── 메인 앱 ──
+  // 메인 앱
   return(
     <div style={{background:C.bg,minHeight:"100vh",maxWidth:480,margin:"0 auto",color:"#fff",position:"relative"}}>
-
-      {/* 헤더 */}
       <div style={{background:"linear-gradient(180deg,#1a2040 0%,#141828 100%)",padding:"16px 16px 14px",borderBottom:`1px solid ${C.border}`,position:"sticky",top:0,zIndex:100}}>
         <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
           <div style={{display:"flex",alignItems:"center",gap:12}}>
             <div style={{width:44,height:44,borderRadius:"50%",background:`linear-gradient(135deg,${C.teal},${C.blue})`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:22}}>⚽</div>
             <div>
               <div style={{fontWeight:900,fontSize:18}}>Ninetyz FC</div>
-              <div style={{fontSize:11,color:C.sub}}>멤버 {members.length}명 · {isAdmin?"관리자 ⚙️":""} {user.name}</div>
+              <div style={{fontSize:11,color:C.sub}}>멤버 {members.length}명 · {isAdmin?"관리자 ⚙️ ":""}{user.name}</div>
             </div>
           </div>
           <button onClick={()=>setUser(null)} style={{background:C.card2,border:`1px solid ${C.border}`,borderRadius:20,padding:"6px 14px",color:"#ccc",fontSize:12,fontWeight:600,cursor:"pointer"}}>로그아웃</button>
@@ -205,7 +276,7 @@ function App(){
 
       <div style={{padding:"16px 14px 80px"}}>
 
-        {/* ── 홈 ── */}
+        {/* 홈 */}
         {tab==="home"&&(
           <div>
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:10,marginBottom:14}}>
@@ -229,16 +300,15 @@ function App(){
               <div style={{fontSize:13,color:C.sub,marginBottom:10}}>이번달 미납</div>
               <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
                 {members.filter(m=>!thisDues[m.id]?.paid).map(m=>(<span key={m.id} style={{background:C.red+"22",border:`1px solid ${C.red}44`,borderRadius:20,padding:"3px 10px",fontSize:12,color:C.red}}>{m.name}</span>))}
-                {members.every(m=>thisDues[m.id]?.paid)&&<span style={{fontSize:13,color:C.teal}}>🎉 전원 납부 완료!</span>}
+                {members.length>0&&members.every(m=>thisDues[m.id]?.paid)&&<span style={{fontSize:13,color:C.teal}}>🎉 전원 납부 완료!</span>}
               </div>
             </div>
           </div>
         )}
 
-        {/* ── 관리 (회비 | 유니폼 | 팀) ── */}
+        {/* 관리 */}
         {tab==="manage"&&(
           <div>
-            {/* 서브탭 */}
             <div style={{display:"flex",background:C.card,borderRadius:14,padding:4,marginBottom:18,gap:4}}>
               {[["dues","💰 회비"],["uniform","👕 유니폼"],["team","⚙️ 팀"]].map(([key,label])=>(
                 <button key={key} onClick={()=>setManTab(key)}
@@ -248,37 +318,22 @@ function App(){
               ))}
             </div>
 
-            {/* ── 서브탭: 회비 ── */}
+            {/* 회비 */}
             {manTab==="dues"&&(
               <div>
-                {/* 월 선택 */}
                 <div style={{display:"flex",flexWrap:"wrap",gap:8,marginBottom:14}}>
-                  {MONTHS.map(m=>(
-                    <button key={m} onClick={()=>setDueMonth(m)}
-                      style={{background:dueMonth===m?C.teal:C.card,border:`1px solid ${dueMonth===m?C.teal:C.border}`,borderRadius:20,padding:"6px 14px",color:dueMonth===m?"#000":"#ccc",fontWeight:dueMonth===m?700:400,fontSize:13,cursor:"pointer",fontFamily:"inherit"}}>
-                      {mLabel(m)}
-                    </button>
-                  ))}
+                  {MONTHS.map(m=>(<button key={m} onClick={()=>setDueMonth(m)} style={{background:dueMonth===m?C.teal:C.card,border:`1px solid ${dueMonth===m?C.teal:C.border}`,borderRadius:20,padding:"6px 14px",color:dueMonth===m?"#000":"#ccc",fontWeight:dueMonth===m?700:400,fontSize:13,cursor:"pointer",fontFamily:"inherit"}}>{mLabel(m)}</button>))}
                 </div>
-                {/* 납부 현황 */}
                 {(()=>{
                   const md=dues[dueMonth]||{};
-                  const pc=Object.values(md).filter(d=>d.paid).length;
-                  const tp=Object.values(md).reduce((s,d)=>s+(d.paid?d.amount:0),0);
-                  return(
-                    <div style={{background:C.card,borderRadius:16,padding:"16px",marginBottom:14}}>
-                      <div style={{display:"flex",justifyContent:"space-between",marginBottom:8}}>
-                        <span style={{fontSize:13,color:C.sub}}>{mLabel(dueMonth)} 납부 현황</span>
-                        <span style={{fontSize:13,fontWeight:700,color:C.teal}}>{pc}/{members.length}명</span>
-                      </div>
-                      <div style={{background:"#333",borderRadius:99,height:6,overflow:"hidden",marginBottom:8}}>
-                        <div style={{width:`${members.length?pc/members.length*100:0}%`,height:"100%",background:`linear-gradient(90deg,${C.teal},${C.blue})`,borderRadius:99}}/>
-                      </div>
-                      
-                    </div>
-                  );
+                  const pc=Object.values(md).filter(d=>d&&d.paid).length;
+                  const tp=Object.values(md).reduce((s,d)=>s+(d&&d.paid?d.amount:0),0);
+                  return(<div style={{background:C.card,borderRadius:16,padding:"16px",marginBottom:14}}>
+                    <div style={{display:"flex",justifyContent:"space-between",marginBottom:8}}><span style={{fontSize:13,color:C.sub}}>{mLabel(dueMonth)} 납부 현황</span><span style={{fontSize:13,fontWeight:700,color:C.teal}}>{pc}/{members.length}명</span></div>
+                    <div style={{background:"#333",borderRadius:99,height:6,overflow:"hidden",marginBottom:8}}><div style={{width:`${members.length?pc/members.length*100:0}%`,height:"100%",background:`linear-gradient(90deg,${C.teal},${C.blue})`,borderRadius:99}}/></div>
+                    <div style={{fontSize:12,color:C.sub}}>수령 {tp.toLocaleString()}원</div>
+                  </div>);
                 })()}
-                {/* 멤버별 현황 */}
                 <div style={{background:C.card,borderRadius:16,padding:"16px"}}>
                   <div style={{fontSize:14,fontWeight:700,marginBottom:14}}>멤버별 현황</div>
                   {members.map(m=>{
@@ -296,17 +351,14 @@ function App(){
                             {isMe&&<span style={{background:C.blue+"33",color:C.blue,fontSize:10,fontWeight:700,padding:"1px 6px",borderRadius:10}}>나</span>}
                           </div>
                           <div style={{display:"flex",gap:6,alignItems:"center"}}>
-                            <span style={{padding:"3px 10px",borderRadius:20,fontSize:11,fontWeight:700,background:mdue.paid?C.teal+"22":C.red+"22",color:mdue.paid?C.teal:C.red,border:`1px solid ${mdue.paid?C.teal+"44":C.red+"44"}`}}>
-                              {mdue.paid?"납부":"미납"}
-                            </span>
-                            {isAdmin&&<button onClick={()=>{if(isEditing){setEditDue(null);}else{setEditDue(m.id);setEditAmt(mdue.amount||"");setEditCustom(m.customStatus||"");}}}
-                              style={{background:C.card2,border:`1px solid ${C.border}`,borderRadius:8,padding:"3px 10px",color:"#ccc",fontSize:11,cursor:"pointer"}}>수정</button>}
+                            <span style={{padding:"3px 10px",borderRadius:20,fontSize:11,fontWeight:700,background:mdue.paid?C.teal+"22":C.red+"22",color:mdue.paid?C.teal:C.red,border:`1px solid ${mdue.paid?C.teal+"44":C.red+"44"}`}}>{mdue.paid?"납부":"미납"}</span>
+                            {isAdmin&&<button onClick={()=>{if(isEditing)setEditDue(null);else{setEditDue(m.id);setEditAmt(mdue.amount||"");setEditCustom(m.customStatus||"");}}} style={{background:C.card2,border:`1px solid ${C.border}`,borderRadius:8,padding:"3px 10px",color:"#ccc",fontSize:11,cursor:"pointer"}}>수정</button>}
                           </div>
                         </div>
-                        <div style={{display:"flex",gap:5,marginBottom:m.status!=="정상"?6:0}}>
+                        <div style={{display:"flex",gap:5,marginBottom:m.status&&m.status!=="정상"?6:0}}>
                           {dots.map((paid,i)=>(<div key={i} style={{width:10,height:10,borderRadius:"50%",background:paid?C.teal:C.red,opacity:paid?1:0.4}}/>))}
                         </div>
-                        {m.status!=="정상"&&<div style={{marginTop:6}}><StatusBadge status={m.status}/></div>}
+                        {m.status&&m.status!=="정상"&&<div style={{marginTop:4}}><StatusBadge status={m.status}/></div>}
                         {m.customStatus&&<div style={{fontSize:12,color:C.sub,marginTop:4}}>{m.customStatus}</div>}
                         {isEditing&&(
                           <div style={{background:C.card2,borderRadius:12,padding:12,marginTop:10}}>
@@ -314,23 +366,22 @@ function App(){
                               <input value={editAmt} onChange={e=>setEditAmt(e.target.value)} placeholder="납부 금액" type="number" style={{...iS,flex:1}}/>
                               <button onClick={()=>{
                                 const amt=parseInt(editAmt)||0;
-                                setDues(prev=>{const n={...prev};if(!n[dueMonth])n[dueMonth]={};n[dueMonth]={...n[dueMonth],[m.id]:{paid:amt>0,amount:amt}};return n;});
-                                addLog(`${m.name} ${mLabel(dueMonth)} ${parseInt(editAmt)>0?"납부":"미납"} 처리`);
+                                const newDues={...dues};
+                                if(!newDues[dueMonth])newDues[dueMonth]={};
+                                newDues[dueMonth]={...newDues[dueMonth],[m.id]:{paid:amt>0,amount:amt}};
+                                fbDues(newDues);
+                                addLog(`${m.name} ${mLabel(dueMonth)} ${amt>0?"납부":"미납"} 처리`);
                                 setEditDue(null);
                               }} style={{...btnT,width:"auto",padding:"10px 16px"}}>저장</button>
                               <button onClick={()=>setEditDue(null)} style={{...btnG,width:"auto",padding:"10px 12px"}}>취소</button>
                             </div>
                             <div style={{fontSize:12,color:C.sub,marginBottom:8}}>상태</div>
                             <div style={{display:"flex",gap:8,marginBottom:10}}>
-                              {["정상","부상","휴식"].map(s=>{
-                                const col=s==="정상"?C.teal:s==="부상"?C.red:C.yellow;
-                                return(<button key={s} onClick={()=>{setMembers(prev=>prev.map(p=>p.id===m.id?{...p,status:s}:p));addLog(`${m.name} 상태 → ${s}`);}}
-                                  style={{flex:1,background:m.status===s?col+"33":C.card,border:`1px solid ${m.status===s?col+"66":C.border}`,borderRadius:10,padding:"7px",color:m.status===s?col:"#ccc",fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>{s}</button>);
-                              })}
+                              {["정상","부상","휴식"].map(s=>{const col=s==="정상"?C.teal:s==="부상"?C.red:C.yellow;return(<button key={s} onClick={()=>{const upd=members.map(p=>p.id===m.id?{...p,status:s}:p);fbMembers(upd);addLog(`${m.name} 상태 → ${s}`);}} style={{flex:1,background:m.status===s?col+"33":C.card,border:`1px solid ${m.status===s?col+"66":C.border}`,borderRadius:10,padding:"7px",color:m.status===s?col:"#ccc",fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>{s}</button>);})}
                             </div>
                             <div style={{display:"flex",gap:8}}>
                               <input value={editCustom} onChange={e=>setEditCustom(e.target.value)} placeholder="직접입력 (예: 출장)" style={{...iS,flex:1}}/>
-                              <button onClick={()=>{setMembers(prev=>prev.map(p=>p.id===m.id?{...p,customStatus:editCustom}:p));}} style={{...btnT,width:"auto",padding:"10px 14px"}}>적용</button>
+                              <button onClick={()=>{const upd=members.map(p=>p.id===m.id?{...p,customStatus:editCustom}:p);fbMembers(upd);}} style={{...btnT,width:"auto",padding:"10px 14px"}}>적용</button>
                             </div>
                           </div>
                         )}
@@ -341,32 +392,20 @@ function App(){
               </div>
             )}
 
-            {/* ── 서브탭: 유니폼 ── */}
+            {/* 유니폼 */}
             {manTab==="uniform"&&(
               <div>
-                {/* 수집 현황 */}
                 <div style={{background:C.card,borderRadius:16,padding:"16px",marginBottom:14}}>
-                  <div style={{display:"flex",justifyContent:"space-between",marginBottom:8}}>
-                    <span style={{fontSize:13,color:C.sub}}>상의 사이즈 수집 현황</span>
-                    <span style={{fontSize:13,fontWeight:700,color:C.yellow}}>{uniformCount}/{members.length}명</span>
-                  </div>
-                  <div style={{background:"#333",borderRadius:99,height:6,overflow:"hidden",marginBottom:8}}>
-                    <div style={{width:`${members.length?uniformCount/members.length*100:0}%`,height:"100%",background:`linear-gradient(90deg,${C.yellow},${C.teal})`,borderRadius:99}}/>
-                  </div>
+                  <div style={{display:"flex",justifyContent:"space-between",marginBottom:8}}><span style={{fontSize:13,color:C.sub}}>상의 사이즈 수집 현황</span><span style={{fontSize:13,fontWeight:700,color:C.yellow}}>{uniformCount}/{members.length}명</span></div>
+                  <div style={{background:"#333",borderRadius:99,height:6,overflow:"hidden",marginBottom:8}}><div style={{width:`${members.length?uniformCount/members.length*100:0}%`,height:"100%",background:`linear-gradient(90deg,${C.yellow},${C.teal})`,borderRadius:99}}/></div>
                   <div style={{fontSize:12,color:C.sub}}>미등록 {members.length-uniformCount}명 남음</div>
                 </div>
-
-                {/* 미등록 */}
                 {members.filter(m=>!m.uniform).length>0&&(
                   <div style={{background:C.card,borderRadius:16,padding:"14px 16px",marginBottom:14}}>
                     <div style={{fontSize:12,color:C.yellow,fontWeight:700,marginBottom:10}}>미등록</div>
-                    <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
-                      {members.filter(m=>!m.uniform).map(m=>(<span key={m.id} style={{background:C.yellow+"22",border:`1px solid ${C.yellow}44`,borderRadius:20,padding:"3px 10px",fontSize:12,color:C.yellow}}>{m.name}</span>))}
-                    </div>
+                    <div style={{display:"flex",flexWrap:"wrap",gap:6}}>{members.filter(m=>!m.uniform).map(m=>(<span key={m.id} style={{background:C.yellow+"22",border:`1px solid ${C.yellow}44`,borderRadius:20,padding:"3px 10px",fontSize:12,color:C.yellow}}>{m.name}</span>))}</div>
                   </div>
                 )}
-
-                {/* 멤버별 사이즈 */}
                 <div style={{background:C.card,borderRadius:16,padding:"16px",marginBottom:14}}>
                   <div style={{fontSize:14,fontWeight:700,marginBottom:14}}>멤버별 사이즈</div>
                   {members.map(m=>{
@@ -374,108 +413,51 @@ function App(){
                     const canEdit=isAdmin||isMe;
                     return(
                       <div key={m.id} style={{borderBottom:`1px solid ${C.border}`,paddingBottom:12,marginBottom:12}}>
-                        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom: canEdit?8:0}}>
+                        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:canEdit?8:0}}>
                           <div style={{display:"flex",alignItems:"center",gap:6}}>
                             <span style={{fontSize:14,fontWeight:700}}>{m.name}</span>
                             {isMe&&<span style={{background:C.blue+"33",color:C.blue,fontSize:10,fontWeight:700,padding:"1px 6px",borderRadius:10}}>나</span>}
                           </div>
-                          {m.uniform?(
-                            <span style={{background:C.teal+"22",border:`1px solid ${C.teal}44`,borderRadius:20,padding:"4px 14px",fontSize:14,fontWeight:900,color:C.teal}}>{m.uniform}</span>
-                          ):(
-                            <span style={{fontSize:12,color:C.dim}}>미등록</span>
-                          )}
+                          {m.uniform?(<span style={{background:C.teal+"22",border:`1px solid ${C.teal}44`,borderRadius:20,padding:"4px 14px",fontSize:14,fontWeight:900,color:C.teal}}>{m.uniform}</span>):(<span style={{fontSize:12,color:C.dim}}>미등록</span>)}
                         </div>
-                        {/* 사이즈 선택 (본인 or 관리자) */}
                         {canEdit&&(
                           <div style={{display:"flex",flexWrap:"wrap",gap:6,marginTop:8}}>
-                            {SIZES.map(s=>(
-                              <button key={s} onClick={()=>{
-                                setMembers(prev=>prev.map(p=>p.id===m.id?{...p,uniform:s}:p));
-                                addLog(`${m.name} 유니폼 사이즈: ${s}`);
-                              }}
-                                style={{padding:"5px 14px",borderRadius:20,fontSize:13,fontWeight:700,cursor:"pointer",border:`1px solid ${m.uniform===s?C.teal:C.border}`,background:m.uniform===s?C.teal:"transparent",color:m.uniform===s?"#000":C.sub}}>
-                                {s}
-                              </button>
-                            ))}
+                            {SIZES.map(s=>(<button key={s} onClick={()=>{const upd=members.map(p=>p.id===m.id?{...p,uniform:s}:p);fbMembers(upd);addLog(`${m.name} 유니폼: ${s}`);}} style={{padding:"5px 14px",borderRadius:20,fontSize:13,fontWeight:700,cursor:"pointer",border:`1px solid ${m.uniform===s?C.teal:C.border}`,background:m.uniform===s?C.teal:"transparent",color:m.uniform===s?"#000":C.sub}}>{s}</button>))}
                           </div>
                         )}
                       </div>
                     );
                   })}
                 </div>
-
-                {/* 사이즈 집계 */}
                 {uniformCount>0&&(
                   <div style={{background:C.card,borderRadius:16,padding:"16px"}}>
                     <div style={{fontSize:14,fontWeight:700,marginBottom:14}}>📊 사이즈 집계</div>
-                    {(()=>{
-                      const cnt={};
-                      members.filter(m=>m.uniform).forEach(m=>{cnt[m.uniform]=(cnt[m.uniform]||0)+1;});
-                      return(
-                        <div>
-                          {SIZES.filter(s=>cnt[s]).map(s=>(
-                            <div key={s} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"8px 0",borderBottom:`1px solid ${C.border}`}}>
-                              <span style={{fontSize:14,fontWeight:700}}>{s}</span>
-                              <div style={{display:"flex",alignItems:"center",gap:10}}>
-                                <div style={{background:C.teal,borderRadius:99,height:6,width:cnt[s]*16}}/>
-                                <span style={{fontSize:14,fontWeight:700,color:C.teal,minWidth:30,textAlign:"right"}}>{cnt[s]}명</span>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      );
-                    })()}
+                    {(()=>{const cnt={};members.filter(m=>m.uniform).forEach(m=>{cnt[m.uniform]=(cnt[m.uniform]||0)+1;});return(<div>{SIZES.filter(s=>cnt[s]).map(s=>(<div key={s} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"8px 0",borderBottom:`1px solid ${C.border}`}}><span style={{fontSize:14,fontWeight:700}}>{s}</span><div style={{display:"flex",alignItems:"center",gap:10}}><div style={{background:C.teal,borderRadius:99,height:6,width:cnt[s]*16}}/><span style={{fontSize:14,fontWeight:700,color:C.teal,minWidth:30,textAlign:"right"}}>{cnt[s]}명</span></div></div>))}</div>);})()}
                   </div>
                 )}
               </div>
             )}
 
-            {/* ── 서브탭: 팀 ── */}
+            {/* 팀 관리 */}
             {manTab==="team"&&(
               <div>
-                {!isAdmin?(
-                  <div style={{background:C.card,borderRadius:16,padding:"30px 20px",textAlign:"center"}}>
-                    <div style={{fontSize:32,marginBottom:12}}>🔒</div>
-                    <div style={{fontSize:14,fontWeight:700,marginBottom:6}}>관리자 전용</div>
-                    <div style={{fontSize:12,color:C.sub}}>팀 관리는 관리자(김민형)만 접근 가능합니다</div>
-                  </div>
-                ):(
+                {!isAdmin?(<div style={{background:C.card,borderRadius:16,padding:"30px 20px",textAlign:"center"}}><div style={{fontSize:32,marginBottom:12}}>🔒</div><div style={{fontSize:14,fontWeight:700,marginBottom:6}}>관리자 전용</div><div style={{fontSize:12,color:C.sub}}>팀 관리는 관리자(김민형)만 접근 가능합니다</div></div>):(
                   <>
                     <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
                       <span style={{fontSize:13,color:C.sub}}>멤버 목록</span>
                       <button onClick={()=>setAddMember(!addMember)} style={{...btnT,width:"auto",padding:"7px 16px",fontSize:12,borderRadius:20}}>+ 멤버 추가</button>
                     </div>
-                    {addMember&&(
-                      <div style={{background:C.card,borderRadius:16,padding:14,marginBottom:12,border:`1px solid ${C.teal}44`}}>
-                        <div style={{display:"flex",gap:8}}>
-                          <input value={newMemberName} onChange={e=>setNewMemberName(e.target.value)} placeholder="이름 입력" style={{...iS,flex:1}}/>
-                          <button onClick={()=>{
-                            if(!newMemberName.trim())return;
-                            const nm={id:Date.now(),name:newMemberName,status:"정상",customStatus:"",uniform:null};
-                            setMembers(p=>[...p,nm]);
-                            setDues(prev=>{const n={...prev};MONTHS.forEach(m=>{if(!n[m])n[m]={};n[m][nm.id]={paid:false,amount:0};});return n;});
-                            addLog(`멤버 추가: ${newMemberName}`);
-                            setNewMemberName("");setAddMember(false);
-                          }} style={{...btnT,width:"auto",padding:"10px 14px"}}>추가</button>
-                          <button onClick={()=>setAddMember(false)} style={{...btnG,width:"auto",padding:"10px 12px"}}>취소</button>
-                        </div>
-                      </div>
-                    )}
+                    {addMember&&(<div style={{background:C.card,borderRadius:16,padding:14,marginBottom:12,border:`1px solid ${C.teal}44`}}><div style={{display:"flex",gap:8}}><input value={newMemberName} onChange={e=>setNewMemberName(e.target.value)} placeholder="이름 입력" style={{...iS,flex:1}}/><button onClick={()=>{if(!newMemberName.trim())return;const newId=Date.now();const nm={id:newId,name:newMemberName,status:"정상",customStatus:"",uniform:null};const upd=[...members,nm];fbMembers(upd);const newDues={...dues};MONTHS.forEach(m=>{if(!newDues[m])newDues[m]={};newDues[m][newId]={paid:false,amount:0};});fbDues(newDues);addLog(`멤버 추가: ${newMemberName}`);setNewMemberName("");setAddMember(false);}} style={{...btnT,width:"auto",padding:"10px 14px"}}>추가</button><button onClick={()=>setAddMember(false)} style={{...btnG,width:"auto",padding:"10px 12px"}}>취소</button></div></div>)}
                     <div style={{background:C.card,borderRadius:16,padding:"4px 0"}}>
-                      {members.map(m=>(
-                        <div key={m.id} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"14px 16px",borderBottom:`1px solid ${C.border}`}}>
-                          <div style={{display:"flex",alignItems:"center",gap:8}}>
-                            <span style={{fontSize:15,fontWeight:600}}>{m.name}</span>
-                            {m.id===ADMIN_ID&&<span style={{background:C.teal+"33",color:C.teal,fontSize:10,fontWeight:700,padding:"1px 6px",borderRadius:10}}>관리자</span>}
-                            {m.id===myId&&<span style={{background:C.blue+"33",color:C.blue,fontSize:10,fontWeight:700,padding:"1px 6px",borderRadius:10}}>나</span>}
-                            {m.status!=="정상"&&<StatusBadge status={m.status}/>}
-                          </div>
-                          {m.id!==ADMIN_ID&&(
-                            <button onClick={()=>{if(window.confirm(`${m.name}님을 삭제할까요?`)){setMembers(p=>p.filter(x=>x.id!==m.id));addLog(`멤버 삭제: ${m.name}`);}}}
-                              style={{background:C.red+"22",border:`1px solid ${C.red}44`,borderRadius:10,padding:"4px 12px",color:C.red,fontSize:12,fontWeight:700,cursor:"pointer"}}>삭제</button>
-                          )}
+                      {members.map(m=>(<div key={m.id} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"14px 16px",borderBottom:`1px solid ${C.border}`}}>
+                        <div style={{display:"flex",alignItems:"center",gap:8}}>
+                          <span style={{fontSize:15,fontWeight:600}}>{m.name}</span>
+                          {m.id===ADMIN_ID&&<span style={{background:C.teal+"33",color:C.teal,fontSize:10,fontWeight:700,padding:"1px 6px",borderRadius:10}}>관리자</span>}
+                          {m.id===myId&&<span style={{background:C.blue+"33",color:C.blue,fontSize:10,fontWeight:700,padding:"1px 6px",borderRadius:10}}>나</span>}
+                          {m.status&&m.status!=="정상"&&<StatusBadge status={m.status}/>}
                         </div>
-                      ))}
+                        {m.id!==ADMIN_ID&&(<button onClick={()=>{if(window.confirm(`${m.name}님을 삭제할까요?`)){fbMembers(members.filter(x=>x.id!==m.id));addLog(`멤버 삭제: ${m.name}`);}}} style={{background:C.red+"22",border:`1px solid ${C.red}44`,borderRadius:10,padding:"4px 12px",color:C.red,fontSize:12,fontWeight:700,cursor:"pointer"}}>삭제</button>)}
+                      </div>))}
                     </div>
                   </>
                 )}
@@ -484,7 +466,7 @@ function App(){
           </div>
         )}
 
-        {/* ── 경기 ── */}
+        {/* 경기 */}
         {tab==="match"&&(
           <div>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
@@ -501,22 +483,16 @@ function App(){
                 <input placeholder="경기 장소 *" value={newMatch.location} onChange={e=>setNewMatch({...newMatch,location:e.target.value})} style={{...iS,marginBottom:8}}/>
                 <input placeholder="상대팀 이름 (선택)" value={newMatch.opponent} onChange={e=>setNewMatch({...newMatch,opponent:e.target.value})} style={{...iS,marginBottom:10}}/>
                 <div style={{display:"flex",gap:8}}>
-                  <button onClick={()=>{
-                    if(!newMatch.date||!newMatch.time||!newMatch.location)return;
-                    const m={id:Date.now(),...newMatch,attendance:{},result:null};
-                    setMatches(p=>[...p,m].sort((a,b)=>a.date.localeCompare(b.date)));
-                    addLog(`경기 추가: ${m.date.slice(5).replace("-","/")} ${m.opponent?"vs "+m.opponent:""}`);
-                    setNewMatch({date:"",time:"",location:"",opponent:""});setShowAddMatch(false);
-                  }} style={{...btnT,flex:1,padding:"10px"}}>추가하기</button>
+                  <button onClick={()=>{if(!newMatch.date||!newMatch.time||!newMatch.location)return;const m={id:Date.now(),...newMatch,attendance:{},result:null};const upd=[...matches,m].sort((a,b)=>a.date.localeCompare(b.date));fbMatches(upd);addLog(`경기 추가: ${m.date.slice(5).replace("-","/")} ${m.opponent?"vs "+m.opponent:""}`);setNewMatch({date:"",time:"",location:"",opponent:""});setShowAddMatch(false);}} style={{...btnT,flex:1,padding:"10px"}}>추가하기</button>
                   <button onClick={()=>setShowAddMatch(false)} style={{...btnG}}>취소</button>
                 </div>
               </div>
             )}
             {matches.length===0&&<div style={{textAlign:"center",color:C.dim,fontSize:13,padding:"40px 0"}}>등록된 경기 일정이 없습니다</div>}
-            {matches.map(match=>{
-              const going=members.filter(m=>match.attendance[m.id]==="yes");
-              const pending=members.filter(m=>!match.attendance[m.id]);
-              const myVote=match.attendance[myId];
+            {[...matches].sort((a,b)=>a.date.localeCompare(b.date)).map(match=>{
+              const going=members.filter(m=>match.attendance&&match.attendance[m.id]==="yes");
+              const pending=members.filter(m=>!match.attendance||!match.attendance[m.id]);
+              const myVote=match.attendance&&match.attendance[myId];
               return(
                 <div key={match.id} style={{background:C.card,borderRadius:16,padding:16,marginBottom:12}}>
                   <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:10}}>
@@ -533,12 +509,7 @@ function App(){
                   </div>
                   {!match.result&&(
                     <div style={{display:"flex",gap:8,marginBottom:10}}>
-                      {["yes","no"].map(v=>(
-                        <button key={v} onClick={()=>setMatches(p=>p.map(m=>m.id===match.id?{...m,attendance:{...m.attendance,[myId]:v}}:m))}
-                          style={{flex:1,padding:"8px",borderRadius:10,fontSize:13,fontWeight:700,cursor:"pointer",border:`1px solid ${v==="yes"?C.teal+"44":C.red+"44"}`,background:myVote===v?(v==="yes"?C.teal:C.red):"transparent",color:myVote===v?"#000":(v==="yes"?C.teal:C.red)}}>
-                          {v==="yes"?"✅ 참가":"❌ 불참"}
-                        </button>
-                      ))}
+                      {["yes","no"].map(v=>(<button key={v} onClick={()=>{const upd=matches.map(m=>m.id===match.id?{...m,attendance:{...(m.attendance||{}),[myId]:v}}:m);fbMatches(upd);}} style={{flex:1,padding:"8px",borderRadius:10,fontSize:13,fontWeight:700,cursor:"pointer",border:`1px solid ${v==="yes"?C.teal+"44":C.red+"44"}`,background:myVote===v?(v==="yes"?C.teal:C.red):"transparent",color:myVote===v?"#000":(v==="yes"?C.teal:C.red)}}>{v==="yes"?"✅ 참가":"❌ 불참"}</button>))}
                     </div>
                   )}
                   {isAdmin&&resultEdit===match.id&&(
@@ -549,20 +520,18 @@ function App(){
                         <div style={{flex:1,textAlign:"center"}}><div style={{fontSize:11,color:C.sub,marginBottom:6}}>{match.opponent||"상대팀"}</div><input type="number" min="0" value={resultIn.opp} onChange={e=>setResultIn({...resultIn,opp:e.target.value})} style={{...iS,textAlign:"center",fontSize:24,fontWeight:900,padding:"8px"}}/></div>
                       </div>
                       <div style={{display:"flex",gap:8}}>
-                        <button onClick={()=>{const our=parseInt(resultIn.our),opp=parseInt(resultIn.opp);if(isNaN(our)||isNaN(opp))return;const outcome=our>opp?"win":our<opp?"lose":"draw";setMatches(p=>p.map(m=>m.id===match.id?{...m,result:{our,opp,outcome}}:m));addLog(`vs ${match.opponent||"상대팀"} ${our}-${opp} ${RL[outcome]}`);setResultEdit(null);setResultIn({our:"",opp:""}); }} style={{...btnT,flex:1,padding:"9px"}}>저장</button>
+                        <button onClick={()=>{const our=parseInt(resultIn.our),opp=parseInt(resultIn.opp);if(isNaN(our)||isNaN(opp))return;const outcome=our>opp?"win":our<opp?"lose":"draw";const upd=matches.map(m=>m.id===match.id?{...m,result:{our,opp,outcome}}:m);fbMatches(upd);addLog(`vs ${match.opponent||"상대팀"} ${our}-${opp} ${RL[outcome]}`);setResultEdit(null);setResultIn({our:"",opp:""}); }} style={{...btnT,flex:1,padding:"9px"}}>저장</button>
                         <button onClick={()=>setResultEdit(null)} style={{...btnG}}>취소</button>
                       </div>
                     </div>
                   )}
                   <div style={{maxHeight:attendView===match.id?600:0,overflow:"hidden",transition:"max-height 0.3s"}}>
-                    <div style={{paddingTop:8}}>
-                      {members.map(m=>(<div key={m.id} style={{display:"flex",justifyContent:"space-between",padding:"5px 0",borderBottom:`1px solid ${C.border}`,fontSize:13}}><span>{m.name}</span><span style={{color:match.attendance[m.id]==="yes"?C.teal:match.attendance[m.id]==="no"?C.red:C.dim,fontWeight:700}}>{match.attendance[m.id]==="yes"?"참가":match.attendance[m.id]==="no"?"불참":"미응답"}</span></div>))}
-                    </div>
+                    <div style={{paddingTop:8}}>{members.map(m=>(<div key={m.id} style={{display:"flex",justifyContent:"space-between",padding:"5px 0",borderBottom:`1px solid ${C.border}`,fontSize:13}}><span>{m.name}</span><span style={{color:match.attendance&&match.attendance[m.id]==="yes"?C.teal:match.attendance&&match.attendance[m.id]==="no"?C.red:C.dim,fontWeight:700}}>{match.attendance&&match.attendance[m.id]==="yes"?"참가":match.attendance&&match.attendance[m.id]==="no"?"불참":"미응답"}</span></div>))}</div>
                   </div>
                   <div style={{display:"flex",gap:8,marginTop:10}}>
                     <button onClick={()=>setAttendView(attendView===match.id?null:match.id)} style={{...btnG,flex:2}}>{attendView===match.id?"접기":"출석 체크"}</button>
                     {isAdmin&&<button onClick={()=>{setResultEdit(resultEdit===match.id?null:match.id);setResultIn({our:match.result?.our??"",opp:match.result?.opp??""});}} style={{...btnG,flex:2}}>결과 {match.result?"수정":"입력"}</button>}
-                    {isAdmin&&<button onClick={()=>{if(window.confirm("삭제할까요?")){setMatches(p=>p.filter(x=>x.id!==match.id));}}} style={{...btnG,flex:1,color:C.red}}>🗑️</button>}
+                    {isAdmin&&<button onClick={()=>{if(window.confirm("삭제할까요?")){fbMatches(matches.filter(x=>x.id!==match.id));}}} style={{...btnG,flex:1,color:C.red}}>🗑️</button>}
                   </div>
                 </div>
               );
@@ -570,16 +539,16 @@ function App(){
           </div>
         )}
 
-        {/* ── 공지 ── */}
+        {/* 공지 */}
         {tab==="notice"&&(
           <div>
             <div style={{fontSize:18,fontWeight:900,marginBottom:16}}>📢 공지사항</div>
-            {isAdmin&&(<div style={{background:C.card,borderRadius:16,padding:16,marginBottom:14}}><textarea value={newNotice} onChange={e=>setNewNotice(e.target.value)} placeholder="공지 내용..." style={{...iS,minHeight:80,resize:"none",marginBottom:10}}/><button onClick={()=>{if(!newNotice.trim())return;setNotices(p=>[{id:Date.now(),content:newNotice,author:user.name,time:"방금 전"},...p]);addLog(`공지 등록`);setNewNotice("");}} style={btnT}>공지 올리기</button></div>)}
-            {notices.map(n=>(<div key={n.id} style={{background:C.card,borderRadius:16,padding:16,marginBottom:10,borderLeft:`3px solid ${C.teal}`,position:"relative"}}><div style={{fontSize:14,color:"#eee",lineHeight:1.6,paddingRight:30}}>{n.content}</div><div style={{fontSize:11,color:C.sub,marginTop:8}}>{n.author} · {n.time}</div>{isAdmin&&<button onClick={()=>setNotices(p=>p.filter(x=>x.id!==n.id))} style={{position:"absolute",top:12,right:12,background:"none",border:"none",color:C.dim,fontSize:18,cursor:"pointer"}}>✕</button>}</div>))}
+            {isAdmin&&(<div style={{background:C.card,borderRadius:16,padding:16,marginBottom:14}}><textarea value={newNotice} onChange={e=>setNewNotice(e.target.value)} placeholder="공지 내용..." style={{...iS,minHeight:80,resize:"none",marginBottom:10}}/><button onClick={()=>{if(!newNotice.trim())return;const n={id:Date.now(),content:newNotice,author:user.name,time:"방금 전"};fbNotices([n,...notices]);addLog("공지 등록");setNewNotice("");}} style={btnT}>공지 올리기</button></div>)}
+            {notices.map(n=>(<div key={n.id} style={{background:C.card,borderRadius:16,padding:16,marginBottom:10,borderLeft:`3px solid ${C.teal}`,position:"relative"}}><div style={{fontSize:14,color:"#eee",lineHeight:1.6,paddingRight:30}}>{n.content}</div><div style={{fontSize:11,color:C.sub,marginTop:8}}>{n.author} · {n.time}</div>{isAdmin&&<button onClick={()=>fbNotices(notices.filter(x=>x.id!==n.id))} style={{position:"absolute",top:12,right:12,background:"none",border:"none",color:C.dim,fontSize:18,cursor:"pointer"}}>✕</button>}</div>))}
           </div>
         )}
 
-        {/* ── 대화 ── */}
+        {/* 대화 */}
         {tab==="chat"&&(
           <div style={{display:"flex",flexDirection:"column",height:"calc(100vh - 160px)"}}>
             <div style={{fontSize:18,fontWeight:900,marginBottom:12}}>💬 팀 대화</div>
@@ -598,21 +567,19 @@ function App(){
               <div ref={chatEndRef}/>
             </div>
             <div style={{display:"flex",gap:8,paddingBottom:4}}>
-              <input value={chatMsg} onChange={e=>setChatMsg(e.target.value)} onKeyDown={e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();if(!chatMsg.trim())return;const now=new Date();const t=`오${now.getHours()<12?"전":"후"} ${String(now.getHours()%12||12).padStart(2,"0")}:${String(now.getMinutes()).padStart(2,"0")}`;setChat(p=>[...p,{id:Date.now(),senderId:myId,senderName:user.name,content:chatMsg,time:t}]);setChatMsg("");}}} placeholder="메시지 입력..." style={{...iS,flex:1}}/>
-              <button onClick={()=>{if(!chatMsg.trim())return;const now=new Date();const t=`오${now.getHours()<12?"전":"후"} ${String(now.getHours()%12||12).padStart(2,"0")}:${String(now.getMinutes()).padStart(2,"0")}`;setChat(p=>[...p,{id:Date.now(),senderId:myId,senderName:user.name,content:chatMsg,time:t}]);setChatMsg("");}} style={{...btnT,width:"auto",padding:"10px 20px",borderRadius:12}}>전송</button>
+              <input value={chatMsg} onChange={e=>setChatMsg(e.target.value)} onKeyDown={e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();if(!chatMsg.trim())return;const now=new Date();const t=`오${now.getHours()<12?"전":"후"} ${String(now.getHours()%12||12).padStart(2,"0")}:${String(now.getMinutes()).padStart(2,"0")}`;const msg={id:Date.now(),senderId:myId,senderName:user.name,content:chatMsg,time:t};db.ref("chat").set([...chat,msg]);setChatMsg("");}}} placeholder="메시지 입력..." style={{...iS,flex:1}}/>
+              <button onClick={()=>{if(!chatMsg.trim())return;const now=new Date();const t=`오${now.getHours()<12?"전":"후"} ${String(now.getHours()%12||12).padStart(2,"0")}:${String(now.getMinutes()).padStart(2,"0")}`;const msg={id:Date.now(),senderId:myId,senderName:user.name,content:chatMsg,time:t};db.ref("chat").set([...chat,msg]);setChatMsg("");}} style={{...btnT,width:"auto",padding:"10px 20px",borderRadius:12}}>전송</button>
             </div>
           </div>
         )}
       </div>
 
-      {/* 하단 탭 */}
       <div style={{position:"fixed",bottom:0,left:"50%",transform:"translateX(-50%)",width:"100%",maxWidth:480,background:"#0d0d0d",borderTop:`1px solid ${C.border}`,display:"flex",padding:"6px 0 10px",zIndex:100}}>
         {tabs.map(t=>(<button key={t.key} onClick={()=>setTab(t.key)} style={{flex:1,background:"none",border:"none",cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",gap:2,padding:"4px 0"}}><span style={{fontSize:22}}>{t.icon}</span><span style={{fontSize:9,fontWeight:tab===t.key?700:400,color:tab===t.key?C.teal:C.dim}}>{t.label}</span></button>))}
       </div>
     </div>
   );
 }
-
 const root=ReactDOM.createRoot(document.getElementById("root"));
 root.render(<App/>);
 </script>
