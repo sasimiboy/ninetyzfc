@@ -322,7 +322,10 @@ function App(){
                   <>
                     <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
                       <span style={{fontSize:13,color:C.sub}}>멤버 목록</span>
-                      <button onClick={()=>setAddMember(!addMember)} style={{...btnT,width:"auto",padding:"7px 16px",fontSize:12,borderRadius:20}}>+ 멤버 추가</button>
+                      <div style={{display:"flex",gap:8}}>
+                        <button onClick={()=>{if(confirm("멤버를 기본 18명으로 초기화할까요?\n기존 데이터는 사라집니다.")){db.ref("members").set(INIT_MEMBERS);addLog("멤버 초기화 완료");}}} style={{background:C.red+"33",border:`1px solid ${C.red}44`,borderRadius:20,padding:"7px 14px",color:C.red,fontSize:12,fontWeight:700,cursor:"pointer"}}>초기화</button>
+                        <button onClick={()=>setAddMember(!addMember)} style={{...btnT,width:"auto",padding:"7px 16px",fontSize:12,borderRadius:20}}>+ 멤버 추가</button>
+                      </div>
                     </div>
                     {addMember&&<div style={{background:C.card,borderRadius:16,padding:14,marginBottom:12,border:`1px solid ${C.teal}44`}}><div style={{display:"flex",gap:8}}><input value={newMemberName} onChange={e=>setNewMemberName(e.target.value)} placeholder="이름 입력" style={{...iS,flex:1}}/><button onClick={()=>{if(!newMemberName.trim())return;const nm={id:Date.now(),name:newMemberName,status:"정상",customStatus:"",uniform:null};db.ref("members").set([...members,nm]);const nd={...dues};MONTHS.forEach(m=>{if(!nd[m])nd[m]={};nd[m][nm.id]={paid:false,amount:0};});db.ref("dues").set(nd);addLog(`멤버 추가: ${newMemberName}`);setNewMemberName("");setAddMember(false);}} style={{...btnT,width:"auto",padding:"10px 14px"}}>추가</button><button onClick={()=>setAddMember(false)} style={{...btnG,width:"auto",padding:"10px 12px"}}>취소</button></div></div>}
                     <div style={{background:C.card,borderRadius:16,padding:"4px 0"}}>
