@@ -4,51 +4,41 @@
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Ninetyz FC</title>
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/firebase@8.10.1/firebase-app.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/firebase@8.10.1/firebase-database.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&display=swap" rel="stylesheet"/>
   <style>
     *{margin:0;padding:0;box-sizing:border-box;}
-    html,body{height:100%;background:#111;font-family:'Noto Sans KR',sans-serif;color:#fff;}
-    #app{max-width:480px;margin:0 auto;min-height:100vh;position:relative;}
-    .card{background:#1a1a1a;border-radius:16px;padding:16px;margin-bottom:12px;}
-    .btn-primary{background:linear-gradient(90deg,#00d4a0,#0088ff);border:none;border-radius:12px;padding:12px;color:#fff;font-weight:700;font-size:14px;cursor:pointer;width:100%;font-family:inherit;}
-    .btn-ghost{background:#222;border:1px solid #2a2a2a;border-radius:12px;padding:10px;color:#ccc;font-weight:600;font-size:13px;cursor:pointer;font-family:inherit;}
-    .input{background:#222;border:1px solid #2a2a2a;border-radius:12px;padding:10px 14px;color:#fff;font-size:14px;outline:none;font-family:inherit;width:100%;box-sizing:border-box;}
-    .tab-content{padding:16px 14px 80px;}
-    .bottom-nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:480px;background:#0d0d0d;border-top:1px solid #2a2a2a;display:flex;padding:6px 0 10px;z-index:100;}
-    .nav-btn{flex:1;background:none;border:none;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:2px;padding:4px 0;font-family:inherit;}
-    .nav-icon{font-size:22px;}
-    .nav-label{font-size:9px;}
-    .badge{padding:2px 8px;border-radius:20px;font-size:11px;font-weight:700;display:inline-block;}
-    .flex{display:flex;} .gap8{gap:8px;} .gap6{gap:6px;}
-    .wrap{flex-wrap:wrap;}
+    body{background:#111;font-family:'Noto Sans KR',sans-serif;color:#fff;}
     input[type=date]::-webkit-calendar-picker-indicator,
     input[type=time]::-webkit-calendar-picker-indicator{filter:invert(1);}
-    .subtab{display:flex;background:#1a1a1a;border-radius:14px;padding:4px;margin-bottom:18px;gap:4px;}
-    .subtab-btn{flex:1;border:none;border-radius:10px;padding:9px 0;font-size:13px;cursor:pointer;font-family:inherit;font-weight:400;color:#888;background:transparent;}
-    .subtab-btn.active{background:linear-gradient(90deg,#00d4a0,#0088ff);color:#fff;font-weight:700;}
-    .dot{width:10px;height:10px;border-radius:50%;display:inline-block;}
-    .size-btn{padding:5px 14px;border-radius:20px;font-size:13px;font-weight:700;cursor:pointer;border:1px solid #2a2a2a;background:transparent;color:#888;font-family:inherit;}
-    .size-btn.active{background:#00d4a0;border-color:#00d4a0;color:#000;}
-    .month-btn{border-radius:20px;padding:6px 14px;font-size:13px;cursor:pointer;border:1px solid #2a2a2a;background:#1a1a1a;color:#ccc;font-family:inherit;}
-    .month-btn.active{background:#00d4a0;border-color:#00d4a0;color:#000;font-weight:700;}
-    .chat-bubble{border-radius:18px;padding:10px 14px;font-size:14px;word-break:break-word;max-width:72%;}
-    .header{background:linear-gradient(180deg,#1a2040 0%,#141828 100%);padding:16px;border-bottom:1px solid #2a2a2a;position:sticky;top:0;z-index:100;}
-    textarea.input{resize:none;min-height:80px;}
     ::-webkit-scrollbar{width:0;}
-    .loading{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;gap:16px;}
-    .spinner{width:48px;height:48px;border:4px solid #2a2a2a;border-top-color:#00d4a0;border-radius:50%;animation:spin 0.8s linear infinite;}
-    @keyframes spin{to{transform:rotate(360deg);}}
   </style>
 </head>
 <body>
-<div id="app"></div>
-<script src="https://unpkg.com/firebase@8.10.1/firebase-app.js"></script>
-<script src="https://unpkg.com/firebase@8.10.1/firebase-database.js"></script>
+<div id="root"></div>
 <script>
-// ── 상수 ──────────────────────────────────────────
-const ADMIN_ID = 1, ADMIN_PW = "1886", DUE_AMT = 20000;
-const SIZES = ["XS","S","M","L","XL","XXL","3XL"];
-const C = {teal:"#00d4a0",blue:"#0088ff",red:"#e05555",yellow:"#e0a030",sub:"#888",dim:"#555",border:"#2a2a2a"};
+  firebase.initializeApp({
+    apiKey:"AIzaSyAO44jFDdSij4H8wLkGXBUsGYMRrThXk8g",
+    authDomain:"ninetyz-fc.firebaseapp.com",
+    databaseURL:"https://ninetyz-fc-default-rtdb.asia-southeast1.firebasedatabase.app",
+    projectId:"ninetyz-fc",
+    storageBucket:"ninetyz-fc.firebasestorage.app",
+    messagingSenderId:"633669623460",
+    appId:"1:633669623460:web:ee844f91ea29c0ffb09031"
+  });
+  window._db = firebase.database();
+</script>
+<script type="text/babel">
+const {useState,useEffect,useRef} = React;
+const db = window._db;
+
+const ADMIN_ID=1,ADMIN_PW="1886",DUE_AMT=20000;
+const SIZES=["XS","S","M","L","XL","XXL","3XL"];
+const C={bg:"#111",card:"#1a1a1a",card2:"#222",teal:"#00d4a0",blue:"#0088ff",red:"#e05555",yellow:"#e0a030",border:"#2a2a2a",sub:"#888",dim:"#555"};
 
 function getMonths(n=5){
   const res=[],now=new Date(2026,6,1);
@@ -82,560 +72,388 @@ function initDues(members){
   const d={};MONTHS.forEach(m=>{d[m]={};members.forEach(mb=>{d[m][mb.id]={paid:false,amount:0};});});return d;
 }
 function toArr(v){if(!v)return[];if(Array.isArray(v))return v.filter(Boolean);return Object.values(v).filter(Boolean);}
-function el(tag,props,...children){
-  const e=document.createElement(tag);
-  if(props)Object.entries(props).forEach(([k,v])=>{
-    if(k==="style"&&typeof v==="object")Object.assign(e.style,v);
-    else if(k.startsWith("on"))e.addEventListener(k.slice(2).toLowerCase(),v);
-    else if(k==="className")e.className=v;
-    else if(k==="value"&&(tag==="input"||tag==="textarea"))e.value=v;
-    else if(k==="placeholder")e.placeholder=v;
-    else if(k==="type")e.type=v;
-    else if(k==="rows")e.rows=v;
-    else e.setAttribute(k,v);
-  });
-  children.flat(Infinity).forEach(c=>{if(c==null)return;e.append(typeof c==="string"||typeof c==="number"?document.createTextNode(String(c)):c);});
-  return e;
-}
-function div(cls,props,...ch){return el("div",{className:cls,...props},...ch);}
-function span(cls,props,...ch){return el("span",{className:cls,...props},...ch);}
-function btn(cls,props,...ch){return el("button",{className:cls,...props},...ch);}
-function inp(props){return el("input",props);}
-function txt(props){return el("textarea",props);}
+function load(key){try{const s=localStorage.getItem(key);return s?JSON.parse(s):null;}catch(e){return null;}}
 
-// ── Firebase ────────────────────────────────────────
-firebase.initializeApp({
-  apiKey:"AIzaSyAO44jFDdSij4H8wLkGXBUsGYMRrThXk8g",
-  authDomain:"ninetyz-fc.firebaseapp.com",
-  databaseURL:"https://ninetyz-fc-default-rtdb.asia-southeast1.firebasedatabase.app",
-  projectId:"ninetyz-fc",
-  storageBucket:"ninetyz-fc.firebasestorage.app",
-  messagingSenderId:"633669623460",
-  appId:"1:633669623460:web:ee844f91ea29c0ffb09031"
-});
-const db=firebase.database();
-function fbSet(path,data){db.ref(path).set(data);}
-function fbOn(path,cb){db.ref(path).on("value",s=>{cb(s.val());});}
-
-// ── 앱 상태 ─────────────────────────────────────────
-let S={
-  loading:true,
-  members:[],dues:{},matches:[],notices:[],chat:[],activity:[],
-  user:null,tab:"home",manTab:"dues",dueMonth:MONTHS[0],
-  editDue:null,editAmt:"",editCustom:"",
-  attendView:null,resultEdit:null,resultIn:{our:"",opp:""},
-  showAddMatch:false,newMatch:{date:"",time:"",location:"",opponent:""},
-  newNotice:"",chatMsg:"",addMember:false,newMemberName:"",
-  pwModal:false,pwInput:"",pwErr:false,pendId:null,
-};
-try{const u=localStorage.getItem("nfc_user");if(u)S.user=JSON.parse(u);}catch(e){}
-
-function setState(updates){
-  Object.assign(S,updates);
-  if(updates.user!==undefined){try{if(S.user)localStorage.setItem("nfc_user",JSON.stringify(S.user));else localStorage.removeItem("nfc_user");}catch(e){}}
-  render();
+function StatusBadge({status}){
+  const col=status==="정상"?C.teal:status==="부상"?C.red:C.yellow;
+  return <span style={{padding:"2px 8px",borderRadius:20,fontSize:11,fontWeight:700,background:col+"22",color:col,border:`1px solid ${col}44`}}>{status}</span>;
 }
 
-function addLog(msg){
-  const entry={id:Date.now(),msg,time:"방금 전"};
-  fbSet("actLog",[entry,...(S.activity||[]).slice(0,19)]);
-}
+function App(){
+  const [loading,setLoading]=useState(true);
+  const [members,setMembers]=useState([]);
+  const [dues,setDues]=useState({});
+  const [matches,setMatches]=useState([]);
+  const [notices,setNotices]=useState([]);
+  const [chat,setChat]=useState([]);
+  const [activity,setActivity]=useState([]);
+  const [user,setUser]=useState(load("nfc_user")||null);
+  const [pwModal,setPwModal]=useState(false);
+  const [pwInput,setPwInput]=useState("");
+  const [pwErr,setPwErr]=useState(false);
+  const [pendId,setPendId]=useState(null);
+  const [tab,setTab]=useState("home");
+  const [manTab,setManTab]=useState("dues");
+  const [dueMonth,setDueMonth]=useState(MONTHS[0]);
+  const [editDue,setEditDue]=useState(null);
+  const [editAmt,setEditAmt]=useState("");
+  const [editCustom,setEditCustom]=useState("");
+  const [attendView,setAttendView]=useState(null);
+  const [resultEdit,setResultEdit]=useState(null);
+  const [resultIn,setResultIn]=useState({our:"",opp:""});
+  const [showAddMatch,setShowAddMatch]=useState(false);
+  const [newMatch,setNewMatch]=useState({date:"",time:"",location:"",opponent:""});
+  const [newNotice,setNewNotice]=useState("");
+  const [chatMsg,setChatMsg]=useState("");
+  const [addMember,setAddMember]=useState(false);
+  const [newMemberName,setNewMemberName]=useState("");
+  const chatEndRef=useRef(null);
+  const actRef=useRef([]);
 
-// Firebase 리스너
-let listenersReady={members:false,dues:false,matches:false,notices:false,chat:false,activity:false};
-function checkReady(){
-  if(Object.values(listenersReady).every(Boolean)){setState({loading:false});}
-}
-fbOn("members",v=>{
-  if(v){setState({members:toArr(v)});}
-  else fbSet("members",INIT_MEMBERS);
-  listenersReady.members=true;checkReady();
-});
-fbOn("dues",v=>{
-  if(v){setState({dues:v});}
-  else fbSet("dues",initDues(INIT_MEMBERS));
-  listenersReady.dues=true;checkReady();
-});
-fbOn("matches",v=>{setState({matches:v?toArr(v):[]});listenersReady.matches=true;checkReady();});
-fbOn("notices",v=>{setState({notices:v?toArr(v):[]});listenersReady.notices=true;checkReady();});
-fbOn("chat",v=>{setState({chat:v?toArr(v):[]});listenersReady.chat=true;checkReady();});
-fbOn("actLog",v=>{setState({activity:v?toArr(v):[]});listenersReady.activity=true;checkReady();});
+  const isAdmin=user?.isAdmin===true;
+  const myId=user?.id;
 
-// ── 렌더링 ──────────────────────────────────────────
-function render(){
-  const app=document.getElementById("app");
-  app.innerHTML="";
-  if(S.loading){app.appendChild(renderLoading());return;}
-  if(!S.user){app.appendChild(renderLogin());return;}
-  app.appendChild(renderMain());
-  if(S.tab==="chat")setTimeout(()=>{const e=document.getElementById("chat-end");if(e)e.scrollIntoView({behavior:"smooth"});},50);
-}
+  useEffect(()=>{
+    let done={members:false,dues:false,matches:false,notices:false,chat:false,actLog:false};
+    function chk(){if(Object.values(done).every(Boolean))setLoading(false);}
+    db.ref("members").on("value",s=>{const v=s.val();if(v)setMembers(toArr(v));else db.ref("members").set(INIT_MEMBERS);done.members=true;chk();});
+    db.ref("dues").on("value",s=>{const v=s.val();if(v)setDues(v);else db.ref("dues").set(initDues(INIT_MEMBERS));done.dues=true;chk();});
+    db.ref("matches").on("value",s=>{setMatches(s.val()?toArr(s.val()):[]);done.matches=true;chk();});
+    db.ref("notices").on("value",s=>{setNotices(s.val()?toArr(s.val()):[]);done.notices=true;chk();});
+    db.ref("chat").on("value",s=>{setChat(s.val()?toArr(s.val()):[]);done.chat=true;chk();});
+    db.ref("actLog").on("value",s=>{const a=s.val()?toArr(s.val()):[];setActivity(a);actRef.current=a;done.actLog=true;chk();});
+    return()=>["members","dues","matches","notices","chat","actLog"].forEach(k=>db.ref(k).off());
+  },[]);
 
-function renderLoading(){
-  return div("loading",{},
-    el("div",{style:{width:72,height:72,borderRadius:"50%",background:`linear-gradient(135deg,${C.teal},${C.blue})`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:36}},"⚽"),
-    el("div",{style:{fontSize:20,fontWeight:900}},"Ninetyz FC"),
-    el("div",{className:"spinner"})
+  useEffect(()=>{try{if(user)localStorage.setItem("nfc_user",JSON.stringify(user));else localStorage.removeItem("nfc_user");}catch(e){}},[user]);
+  useEffect(()=>{if(tab==="chat")setTimeout(()=>chatEndRef.current?.scrollIntoView({behavior:"smooth"}),100);},[chat,tab]);
+
+  function addLog(msg){db.ref("actLog").set([{id:Date.now(),msg,time:"방금 전"},...actRef.current.slice(0,19)]);}
+  function selectMember(m){if(m.id===ADMIN_ID){setPendId(m.id);setPwModal(true);setPwInput("");setPwErr(false);}else setUser({id:m.id,name:m.name,isAdmin:false});}
+  function submitPw(){if(pwInput===ADMIN_PW){const m=members.find(x=>x.id===pendId);setUser({id:pendId,name:m.name,isAdmin:true});setPwModal(false);setPwInput("");setPwErr(false);}else setPwErr(true);}
+
+  const iS={background:C.card2,border:`1px solid ${C.border}`,borderRadius:12,padding:"10px 14px",color:"#fff",fontSize:14,outline:"none",fontFamily:"inherit",width:"100%",boxSizing:"border-box"};
+  const btnT={background:`linear-gradient(90deg,${C.teal},${C.blue})`,border:"none",borderRadius:12,padding:"12px",color:"#fff",fontWeight:700,fontSize:14,cursor:"pointer",width:"100%"};
+  const btnG={background:C.card2,border:`1px solid ${C.border}`,borderRadius:12,padding:"10px",color:"#ccc",fontWeight:600,fontSize:13,cursor:"pointer",flex:1};
+
+  const thisMonth=MONTHS[0];
+  const thisDues=dues[thisMonth]||{};
+  const paidCount=Object.values(thisDues).filter(d=>d?.paid).length;
+  const totalPaid=Object.values(thisDues).reduce((s,d)=>s+(d?.paid?d.amount:0),0);
+  const uniformCount=members.filter(m=>m.uniform).length;
+  const nextMatch=[...matches].filter(m=>!m.result).sort((a,b)=>a.date.localeCompare(b.date))[0];
+  const RC={win:C.teal,lose:C.red,draw:C.yellow},RL={win:"승",lose:"패",draw:"무"};
+
+  if(loading)return(
+    <div style={{background:C.bg,minHeight:"100vh",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:16}}>
+      <div style={{width:72,height:72,borderRadius:"50%",background:`linear-gradient(135deg,${C.teal},${C.blue})`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:36}}>⚽</div>
+      <div style={{fontSize:20,fontWeight:900}}>Ninetyz FC</div>
+      <div style={{fontSize:13,color:C.sub}}>불러오는 중...</div>
+    </div>
+  );
+
+  if(!user)return(
+    <div style={{background:C.bg,minHeight:"100vh",padding:24,maxWidth:480,margin:"0 auto"}}>
+      {pwModal&&(
+        <div style={{position:"fixed",inset:0,background:"#000c",zIndex:999,display:"flex",alignItems:"center",justifyContent:"center",padding:20}}>
+          <div style={{background:"#1e2235",borderRadius:20,padding:28,width:"100%",maxWidth:320,border:`1px solid ${C.border}`}}>
+            <div style={{fontSize:22,textAlign:"center",marginBottom:8}}>🔐</div>
+            <div style={{fontSize:16,fontWeight:900,textAlign:"center",marginBottom:4}}>관리자 확인</div>
+            <div style={{fontSize:12,color:C.sub,textAlign:"center",marginBottom:20}}>비밀번호 입력</div>
+            <input type="password" value={pwInput} onChange={e=>{setPwInput(e.target.value);setPwErr(false);}} onKeyDown={e=>e.key==="Enter"&&submitPw()} autoFocus style={{...iS,textAlign:"center",fontSize:20,letterSpacing:6,marginBottom:8}}/>
+            {pwErr&&<div style={{fontSize:12,color:C.red,textAlign:"center",marginBottom:8}}>비밀번호가 틀렸습니다</div>}
+            <div style={{display:"flex",gap:8,marginTop:4}}>
+              <button onClick={()=>{setPwModal(false);setPwInput("");setPwErr(false);}} style={{...btnG}}>취소</button>
+              <button onClick={submitPw} style={{...btnT,flex:1,padding:"10px"}}>확인</button>
+            </div>
+          </div>
+        </div>
+      )}
+      <div style={{textAlign:"center",marginBottom:32,paddingTop:20}}>
+        <div style={{width:72,height:72,borderRadius:"50%",background:`linear-gradient(135deg,${C.teal},${C.blue})`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:36,margin:"0 auto 16px"}}>⚽</div>
+        <div style={{fontSize:24,fontWeight:900}}>Ninetyz FC</div>
+        <div style={{fontSize:13,color:C.sub,marginTop:6}}>이름을 눌러 입장하세요</div>
+      </div>
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:10}}>
+        {members.map(m=>(
+          <button key={m.id} onClick={()=>selectMember(m)} style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:14,padding:"14px 8px",color:"#fff",cursor:"pointer",fontFamily:"inherit",textAlign:"center"}}>
+            <div style={{fontSize:13,fontWeight:700}}>{m.name}</div>
+            {m.id===ADMIN_ID&&<div style={{fontSize:10,color:C.teal,marginTop:3}}>🔐 관리자</div>}
+            {m.status&&m.status!=="정상"&&<div style={{fontSize:10,color:m.status==="부상"?C.red:C.yellow,marginTop:3}}>{m.status}</div>}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+
+  return(
+    <div style={{background:C.bg,minHeight:"100vh",maxWidth:480,margin:"0 auto",color:"#fff",position:"relative"}}>
+      <div style={{background:"linear-gradient(180deg,#1a2040,#141828)",padding:"16px",borderBottom:`1px solid ${C.border}`,position:"sticky",top:0,zIndex:100}}>
+        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+          <div style={{display:"flex",alignItems:"center",gap:12}}>
+            <div style={{width:44,height:44,borderRadius:"50%",background:`linear-gradient(135deg,${C.teal},${C.blue})`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:22}}>⚽</div>
+            <div>
+              <div style={{fontWeight:900,fontSize:18}}>Ninetyz FC</div>
+              <div style={{fontSize:11,color:C.sub}}>멤버 {members.length}명 · {isAdmin?"관리자 ⚙️ ":""}{user.name}</div>
+            </div>
+          </div>
+          <button onClick={()=>setUser(null)} style={{background:C.card2,border:`1px solid ${C.border}`,borderRadius:20,padding:"6px 14px",color:"#ccc",fontSize:12,fontWeight:600,cursor:"pointer"}}>로그아웃</button>
+        </div>
+      </div>
+
+      <div style={{padding:"16px 14px 80px"}}>
+
+        {tab==="home"&&(
+          <div>
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:10,marginBottom:14}}>
+              <div style={{background:`linear-gradient(135deg,${C.teal}22,${C.teal}08)`,border:`1px solid ${C.teal}33`,borderRadius:16,padding:"14px 12px"}}>
+                <div style={{fontSize:11,color:C.teal,fontWeight:700,marginBottom:6}}>{mLabel(thisMonth)} 회비</div>
+                <div style={{fontSize:28,fontWeight:900}}>{paidCount}<span style={{fontSize:13,color:C.sub,fontWeight:400}}>/{members.length}</span></div>
+                <div style={{fontSize:11,color:C.sub,marginTop:3}}>{totalPaid.toLocaleString()}원</div>
+              </div>
+              <div style={{background:`linear-gradient(135deg,${C.blue}22,${C.blue}08)`,border:`1px solid ${C.blue}33`,borderRadius:16,padding:"14px 12px"}}>
+                <div style={{fontSize:11,color:C.blue,fontWeight:700,marginBottom:6}}>다음 경기</div>
+                {nextMatch?(<><div style={{fontSize:15,fontWeight:900}}>{nextMatch.date.slice(5).replace("-","/")}</div>{nextMatch.opponent&&<div style={{fontSize:11,color:C.sub,marginTop:3}}>vs {nextMatch.opponent}</div>}</>):<div style={{fontSize:13,color:C.sub,marginTop:6}}>일정 없음</div>}
+              </div>
+              <div style={{background:`linear-gradient(135deg,${C.yellow}22,${C.yellow}08)`,border:`1px solid ${C.yellow}33`,borderRadius:16,padding:"14px 12px"}}>
+                <div style={{fontSize:11,color:C.yellow,fontWeight:700,marginBottom:6}}>유니폼</div>
+                <div style={{fontSize:28,fontWeight:900}}>{uniformCount}<span style={{fontSize:13,color:C.sub,fontWeight:400}}>/{members.length}</span></div>
+              </div>
+            </div>
+            {(()=>{const done=matches.filter(m=>m.result);if(!done.length)return null;const w=done.filter(m=>m.result.outcome==="win").length,d=done.filter(m=>m.result.outcome==="draw").length,l=done.filter(m=>m.result.outcome==="lose").length;return(<div style={{background:C.card,borderRadius:16,padding:"14px 16px",marginBottom:12}}><div style={{fontSize:13,color:C.sub,marginBottom:10}}>시즌 전적</div><div style={{display:"flex",gap:24}}>{[[w,C.teal,"승"],[d,C.yellow,"무"],[l,C.red,"패"]].map(([n,c,lb])=>(<div key={lb}><div style={{fontSize:28,fontWeight:900,color:c}}>{n}</div><div style={{fontSize:12,color:C.sub}}>{lb}</div></div>))}</div></div>);})()}
+            {activity.length>0&&(<div style={{background:C.card,borderRadius:16,padding:"14px 16px",marginBottom:12}}><div style={{fontSize:13,color:C.sub,marginBottom:10}}>최근 활동</div>{activity.slice(0,5).map(a=>(<div key={a.id} style={{display:"flex",justifyContent:"space-between",marginBottom:8,fontSize:13}}><span><span style={{color:C.teal,marginRight:6}}>•</span>{a.msg}</span><span style={{color:C.dim,fontSize:11,marginLeft:8,whiteSpace:"nowrap"}}>{a.time}</span></div>))}</div>)}
+            <div style={{background:C.card,borderRadius:16,padding:"14px 16px"}}>
+              <div style={{fontSize:13,color:C.sub,marginBottom:10}}>이번달 미납</div>
+              <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
+                {members.filter(m=>!thisDues[m.id]?.paid).map(m=>(<span key={m.id} style={{background:C.red+"22",border:`1px solid ${C.red}44`,borderRadius:20,padding:"3px 10px",fontSize:12,color:C.red}}>{m.name}</span>))}
+                {members.length>0&&members.every(m=>thisDues[m.id]?.paid)&&<span style={{fontSize:13,color:C.teal}}>🎉 전원 납부 완료!</span>}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {tab==="manage"&&(
+          <div>
+            <div style={{display:"flex",background:C.card,borderRadius:14,padding:4,marginBottom:18,gap:4}}>
+              {[["dues","💰 회비"],["uniform","👕 유니폼"],["team","⚙️ 팀"]].map(([key,label])=>(
+                <button key={key} onClick={()=>setManTab(key)} style={{flex:1,background:manTab===key?`linear-gradient(90deg,${C.teal},${C.blue})`:"transparent",border:"none",borderRadius:10,padding:"9px 0",color:manTab===key?"#fff":C.sub,fontWeight:manTab===key?700:400,fontSize:13,cursor:"pointer",fontFamily:"inherit"}}>{label}</button>
+              ))}
+            </div>
+
+            {manTab==="dues"&&(
+              <div>
+                <div style={{display:"flex",flexWrap:"wrap",gap:8,marginBottom:14}}>
+                  {MONTHS.map(m=>(<button key={m} onClick={()=>setDueMonth(m)} style={{background:dueMonth===m?C.teal:C.card,border:`1px solid ${dueMonth===m?C.teal:C.border}`,borderRadius:20,padding:"6px 14px",color:dueMonth===m?"#000":"#ccc",fontWeight:dueMonth===m?700:400,fontSize:13,cursor:"pointer",fontFamily:"inherit"}}>{mLabel(m)}</button>))}
+                </div>
+                {(()=>{const md=dues[dueMonth]||{};const pc=Object.values(md).filter(d=>d?.paid).length;const tp=Object.values(md).reduce((s,d)=>s+(d?.paid?d.amount:0),0);return(<div style={{background:C.card,borderRadius:16,padding:"16px",marginBottom:14}}><div style={{display:"flex",justifyContent:"space-between",marginBottom:8}}><span style={{fontSize:13,color:C.sub}}>{mLabel(dueMonth)} 납부 현황</span><span style={{fontSize:13,fontWeight:700,color:C.teal}}>{pc}/{members.length}명</span></div><div style={{background:"#333",borderRadius:99,height:6,overflow:"hidden",marginBottom:8}}><div style={{width:`${members.length?pc/members.length*100:0}%`,height:"100%",background:`linear-gradient(90deg,${C.teal},${C.blue})`,borderRadius:99}}/></div><div style={{fontSize:12,color:C.sub}}>수령 {tp.toLocaleString()}원</div></div>);})()}
+                <div style={{background:C.card,borderRadius:16,padding:"16px"}}>
+                  <div style={{fontSize:14,fontWeight:700,marginBottom:14}}>멤버별 현황</div>
+                  {members.map(m=>{
+                    const mdue=(dues[dueMonth]||{})[m.id]||{paid:false,amount:0};
+                    const isMe=m.id===myId,isEditing=editDue===m.id&&isAdmin;
+                    const dots=MONTHS.map(mo=>(dues[mo]||{})[m.id]?.paid||false);
+                    return(
+                      <div key={m.id} style={{borderBottom:`1px solid ${C.border}`,paddingBottom:12,marginBottom:12}}>
+                        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
+                          <div style={{display:"flex",alignItems:"center",gap:6}}>
+                            <span style={{fontSize:14,fontWeight:700}}>{m.name}</span>
+                            {m.id===ADMIN_ID&&<span style={{background:C.teal+"33",color:C.teal,fontSize:10,fontWeight:700,padding:"1px 6px",borderRadius:10}}>관리자</span>}
+                            {isMe&&<span style={{background:C.blue+"33",color:C.blue,fontSize:10,fontWeight:700,padding:"1px 6px",borderRadius:10}}>나</span>}
+                          </div>
+                          <div style={{display:"flex",gap:6,alignItems:"center"}}>
+                            <span style={{padding:"3px 10px",borderRadius:20,fontSize:11,fontWeight:700,background:mdue.paid?C.teal+"22":C.red+"22",color:mdue.paid?C.teal:C.red,border:`1px solid ${mdue.paid?C.teal+"44":C.red+"44"}`}}>{mdue.paid?"납부":"미납"}</span>
+                            {isAdmin&&<button onClick={()=>{if(isEditing)setEditDue(null);else{setEditDue(m.id);setEditAmt(mdue.amount||"");setEditCustom(m.customStatus||"");}}} style={{background:C.card2,border:`1px solid ${C.border}`,borderRadius:8,padding:"3px 10px",color:"#ccc",fontSize:11,cursor:"pointer"}}>{isEditing?"닫기":"수정"}</button>}
+                          </div>
+                        </div>
+                        <div style={{display:"flex",gap:5,marginBottom:4}}>{dots.map((p,i)=><div key={i} style={{width:10,height:10,borderRadius:"50%",background:p?C.teal:C.red,opacity:p?1:0.4}}/>)}</div>
+                        {m.status&&m.status!=="정상"&&<div style={{marginBottom:4}}><StatusBadge status={m.status}/></div>}
+                        {m.customStatus&&<div style={{fontSize:12,color:C.sub,marginTop:4}}>{m.customStatus}</div>}
+                        {isEditing&&(
+                          <div style={{background:C.card2,borderRadius:12,padding:12,marginTop:10}}>
+                            <div style={{display:"flex",gap:8,marginBottom:10}}>
+                              <input value={editAmt} onChange={e=>setEditAmt(e.target.value)} placeholder="납부 금액" type="number" style={{...iS,flex:1}}/>
+                              <button onClick={()=>{const amt=parseInt(editAmt)||0;const nd={...dues};if(!nd[dueMonth])nd[dueMonth]={};nd[dueMonth]={...nd[dueMonth],[m.id]:{paid:amt>0,amount:amt}};db.ref("dues").set(nd);addLog(`${m.name} ${mLabel(dueMonth)} ${amt>0?"납부":"미납"} 처리`);setEditDue(null);}} style={{...btnT,width:"auto",padding:"10px 16px"}}>저장</button>
+                              <button onClick={()=>setEditDue(null)} style={{...btnG,width:"auto",padding:"10px 12px"}}>취소</button>
+                            </div>
+                            <div style={{fontSize:12,color:C.sub,marginBottom:8}}>상태</div>
+                            <div style={{display:"flex",gap:8,marginBottom:10}}>
+                              {["정상","부상","휴식"].map(s=>{const col=s==="정상"?C.teal:s==="부상"?C.red:C.yellow;return(<button key={s} onClick={()=>{db.ref("members").set(members.map(p=>p.id===m.id?{...p,status:s}:p));addLog(`${m.name} 상태 → ${s}`);}} style={{flex:1,background:m.status===s?col+"33":C.card,border:`1px solid ${m.status===s?col+"66":C.border}`,borderRadius:10,padding:"7px",color:m.status===s?col:"#ccc",fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>{s}</button>);})}
+                            </div>
+                            <div style={{display:"flex",gap:8}}>
+                              <input value={editCustom} onChange={e=>setEditCustom(e.target.value)} placeholder="직접입력" style={{...iS,flex:1}}/>
+                              <button onClick={()=>db.ref("members").set(members.map(p=>p.id===m.id?{...p,customStatus:editCustom}:p))} style={{...btnT,width:"auto",padding:"10px 14px"}}>적용</button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {manTab==="uniform"&&(
+              <div>
+                <div style={{background:C.card,borderRadius:16,padding:"16px",marginBottom:14}}>
+                  <div style={{display:"flex",justifyContent:"space-between",marginBottom:8}}><span style={{fontSize:13,color:C.sub}}>상의 사이즈 수집 현황</span><span style={{fontSize:13,fontWeight:700,color:C.yellow}}>{uniformCount}/{members.length}명</span></div>
+                  <div style={{background:"#333",borderRadius:99,height:6,overflow:"hidden",marginBottom:8}}><div style={{width:`${members.length?uniformCount/members.length*100:0}%`,height:"100%",background:`linear-gradient(90deg,${C.yellow},${C.teal})`,borderRadius:99}}/></div>
+                  <div style={{fontSize:12,color:C.sub}}>미등록 {members.length-uniformCount}명 남음</div>
+                </div>
+                {members.filter(m=>!m.uniform).length>0&&<div style={{background:C.card,borderRadius:16,padding:"14px 16px",marginBottom:14}}><div style={{fontSize:12,color:C.yellow,fontWeight:700,marginBottom:10}}>미등록</div><div style={{display:"flex",flexWrap:"wrap",gap:6}}>{members.filter(m=>!m.uniform).map(m=>(<span key={m.id} style={{background:C.yellow+"22",border:`1px solid ${C.yellow}44`,borderRadius:20,padding:"3px 10px",fontSize:12,color:C.yellow}}>{m.name}</span>))}</div></div>}
+                <div style={{background:C.card,borderRadius:16,padding:"16px",marginBottom:14}}>
+                  <div style={{fontSize:14,fontWeight:700,marginBottom:14}}>멤버별 사이즈</div>
+                  {members.map(m=>{
+                    const isMe=m.id===myId,canEdit=isAdmin||isMe;
+                    return(
+                      <div key={m.id} style={{borderBottom:`1px solid ${C.border}`,paddingBottom:12,marginBottom:12}}>
+                        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:canEdit?8:0}}>
+                          <div style={{display:"flex",alignItems:"center",gap:6}}>
+                            <span style={{fontSize:14,fontWeight:700}}>{m.name}</span>
+                            {isMe&&<span style={{background:C.blue+"33",color:C.blue,fontSize:10,fontWeight:700,padding:"1px 6px",borderRadius:10}}>나</span>}
+                          </div>
+                          {m.uniform?<span style={{background:C.teal+"22",border:`1px solid ${C.teal}44`,borderRadius:20,padding:"4px 14px",fontSize:14,fontWeight:900,color:C.teal}}>{m.uniform}</span>:<span style={{fontSize:12,color:C.dim}}>미등록</span>}
+                        </div>
+                        {canEdit&&<div style={{display:"flex",flexWrap:"wrap",gap:6,marginTop:8}}>{SIZES.map(s=><button key={s} onClick={()=>{db.ref("members").set(members.map(p=>p.id===m.id?{...p,uniform:s}:p));addLog(`${m.name} 유니폼: ${s}`);}} style={{padding:"5px 14px",borderRadius:20,fontSize:13,fontWeight:700,cursor:"pointer",border:`1px solid ${m.uniform===s?C.teal:C.border}`,background:m.uniform===s?C.teal:"transparent",color:m.uniform===s?"#000":C.sub,fontFamily:"inherit"}}>{s}</button>)}</div>}
+                      </div>
+                    );
+                  })}
+                </div>
+                {uniformCount>0&&(()=>{const cnt={};members.filter(m=>m.uniform).forEach(m=>{cnt[m.uniform]=(cnt[m.uniform]||0)+1;});return(<div style={{background:C.card,borderRadius:16,padding:"16px"}}><div style={{fontSize:14,fontWeight:700,marginBottom:14}}>📊 사이즈 집계</div>{SIZES.filter(s=>cnt[s]).map(s=>(<div key={s} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"8px 0",borderBottom:`1px solid ${C.border}`}}><span style={{fontSize:14,fontWeight:700}}>{s}</span><div style={{display:"flex",alignItems:"center",gap:10}}><div style={{background:C.teal,borderRadius:99,height:6,width:cnt[s]*16}}/><span style={{fontSize:14,fontWeight:700,color:C.teal,minWidth:30,textAlign:"right"}}>{cnt[s]}명</span></div></div>))}</div>);})()}
+              </div>
+            )}
+
+            {manTab==="team"&&(
+              <div>
+                {!isAdmin?(<div style={{background:C.card,borderRadius:16,padding:"30px 20px",textAlign:"center"}}><div style={{fontSize:32,marginBottom:12}}>🔒</div><div style={{fontSize:14,fontWeight:700,marginBottom:6}}>관리자 전용</div><div style={{fontSize:12,color:C.sub}}>팀 관리는 관리자만 접근 가능합니다</div></div>):(
+                  <>
+                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
+                      <span style={{fontSize:13,color:C.sub}}>멤버 목록</span>
+                      <button onClick={()=>setAddMember(!addMember)} style={{...btnT,width:"auto",padding:"7px 16px",fontSize:12,borderRadius:20}}>+ 멤버 추가</button>
+                    </div>
+                    {addMember&&<div style={{background:C.card,borderRadius:16,padding:14,marginBottom:12,border:`1px solid ${C.teal}44`}}><div style={{display:"flex",gap:8}}><input value={newMemberName} onChange={e=>setNewMemberName(e.target.value)} placeholder="이름 입력" style={{...iS,flex:1}}/><button onClick={()=>{if(!newMemberName.trim())return;const nm={id:Date.now(),name:newMemberName,status:"정상",customStatus:"",uniform:null};db.ref("members").set([...members,nm]);const nd={...dues};MONTHS.forEach(m=>{if(!nd[m])nd[m]={};nd[m][nm.id]={paid:false,amount:0};});db.ref("dues").set(nd);addLog(`멤버 추가: ${newMemberName}`);setNewMemberName("");setAddMember(false);}} style={{...btnT,width:"auto",padding:"10px 14px"}}>추가</button><button onClick={()=>setAddMember(false)} style={{...btnG,width:"auto",padding:"10px 12px"}}>취소</button></div></div>}
+                    <div style={{background:C.card,borderRadius:16,padding:"4px 0"}}>
+                      {members.map(m=>(<div key={m.id} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"14px 16px",borderBottom:`1px solid ${C.border}`}}>
+                        <div style={{display:"flex",alignItems:"center",gap:8}}>
+                          <span style={{fontSize:15,fontWeight:600}}>{m.name}</span>
+                          {m.id===ADMIN_ID&&<span style={{background:C.teal+"33",color:C.teal,fontSize:10,fontWeight:700,padding:"1px 6px",borderRadius:10}}>관리자</span>}
+                          {m.id===myId&&<span style={{background:C.blue+"33",color:C.blue,fontSize:10,fontWeight:700,padding:"1px 6px",borderRadius:10}}>나</span>}
+                          {m.status&&m.status!=="정상"&&<StatusBadge status={m.status}/>}
+                        </div>
+                        {m.id!==ADMIN_ID&&<button onClick={()=>{if(confirm(`${m.name}님을 삭제할까요?`)){db.ref("members").set(members.filter(x=>x.id!==m.id));addLog(`멤버 삭제: ${m.name}`);}}} style={{background:C.red+"22",border:`1px solid ${C.red}44`,borderRadius:10,padding:"4px 12px",color:C.red,fontSize:12,fontWeight:700,cursor:"pointer"}}>삭제</button>}
+                      </div>))}
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+
+        {tab==="match"&&(
+          <div>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
+              <div style={{fontSize:18,fontWeight:900}}>📅 경기 일정</div>
+              {isAdmin&&<button onClick={()=>setShowAddMatch(!showAddMatch)} style={{...btnT,width:"auto",padding:"8px 16px",fontSize:13,borderRadius:20}}>+ 일정 추가</button>}
+            </div>
+            {isAdmin&&showAddMatch&&(
+              <div style={{background:C.card,borderRadius:16,padding:16,marginBottom:14,border:`1px solid ${C.teal}44`}}>
+                <div style={{fontSize:13,fontWeight:700,color:C.teal,marginBottom:12}}>새 경기 추가</div>
+                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:8}}>
+                  <input type="date" value={newMatch.date} onChange={e=>setNewMatch({...newMatch,date:e.target.value})} style={iS}/>
+                  <input type="time" value={newMatch.time} onChange={e=>setNewMatch({...newMatch,time:e.target.value})} style={iS}/>
+                </div>
+                <input placeholder="경기 장소 *" value={newMatch.location} onChange={e=>setNewMatch({...newMatch,location:e.target.value})} style={{...iS,marginBottom:8}}/>
+                <input placeholder="상대팀 이름 (선택)" value={newMatch.opponent} onChange={e=>setNewMatch({...newMatch,opponent:e.target.value})} style={{...iS,marginBottom:10}}/>
+                <div style={{display:"flex",gap:8}}>
+                  <button onClick={()=>{if(!newMatch.date||!newMatch.time||!newMatch.location)return;const m={id:Date.now(),...newMatch,attendance:{},result:null};const upd=[...matches,m].sort((a,b)=>a.date.localeCompare(b.date));db.ref("matches").set(upd);addLog(`경기 추가: ${m.date.slice(5).replace("-","/")} ${m.opponent?"vs "+m.opponent:""}`);setNewMatch({date:"",time:"",location:"",opponent:""});setShowAddMatch(false);}} style={{...btnT,flex:1,padding:"10px"}}>추가하기</button>
+                  <button onClick={()=>setShowAddMatch(false)} style={{...btnG}}>취소</button>
+                </div>
+              </div>
+            )}
+            {matches.length===0&&<div style={{textAlign:"center",color:C.dim,fontSize:13,padding:"40px 0"}}>등록된 경기 일정이 없습니다</div>}
+            {[...matches].sort((a,b)=>a.date.localeCompare(b.date)).map(match=>{
+              const going=members.filter(m=>match.attendance?.[m.id]==="yes");
+              const pending=members.filter(m=>!match.attendance?.[m.id]);
+              const myVote=match.attendance?.[myId];
+              return(
+                <div key={match.id} style={{background:C.card,borderRadius:16,padding:16,marginBottom:12}}>
+                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:10}}>
+                    <div>
+                      <div style={{display:"flex",alignItems:"center",gap:8}}>
+                        <span style={{fontSize:17,fontWeight:900}}>{match.date.slice(5).replace("-","/")} {match.time}</span>
+                        {match.result&&<span style={{padding:"2px 8px",borderRadius:20,fontSize:11,fontWeight:900,background:RC[match.result.outcome]+"22",color:RC[match.result.outcome],border:`1px solid ${RC[match.result.outcome]}44`}}>{RL[match.result.outcome]}</span>}
+                      </div>
+                      <div style={{fontSize:12,color:C.sub,marginTop:4}}>📍 {match.location}{match.opponent&&<span style={{color:C.blue,marginLeft:8}}>vs {match.opponent}</span>}</div>
+                    </div>
+                    <div style={{textAlign:"right"}}>
+                      {match.result?<div style={{fontSize:24,fontWeight:900,color:RC[match.result.outcome]}}>{match.result.our} - {match.result.opp}</div>:<><div style={{fontSize:13,color:C.teal,fontWeight:700}}>참가 {going.length}명</div><div style={{fontSize:11,color:C.dim}}>미응답 {pending.length}명</div></>}
+                    </div>
+                  </div>
+                  {!match.result&&<div style={{display:"flex",gap:8,marginBottom:10}}>{["yes","no"].map(v=><button key={v} onClick={()=>db.ref("matches").set(matches.map(m=>m.id===match.id?{...m,attendance:{...(m.attendance||{}),[myId]:v}}:m))} style={{flex:1,padding:"8px",borderRadius:10,fontSize:13,fontWeight:700,cursor:"pointer",border:`1px solid ${v==="yes"?C.teal+"44":C.red+"44"}`,background:myVote===v?(v==="yes"?C.teal:C.red):"transparent",color:myVote===v?"#000":(v==="yes"?C.teal:C.red),fontFamily:"inherit"}}>{v==="yes"?"✅ 참가":"❌ 불참"}</button>)}</div>}
+                  {isAdmin&&resultEdit===match.id&&(
+                    <div style={{background:C.card2,borderRadius:12,padding:12,marginBottom:10}}>
+                      <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:10}}>
+                        <div style={{flex:1,textAlign:"center"}}><div style={{fontSize:11,color:C.sub,marginBottom:6}}>우리팀</div><input type="number" min="0" value={resultIn.our} onChange={e=>setResultIn({...resultIn,our:e.target.value})} style={{...iS,textAlign:"center",fontSize:24,fontWeight:900,padding:"8px"}}/></div>
+                        <span style={{fontSize:20,color:C.dim,fontWeight:900,paddingTop:20}}>:</span>
+                        <div style={{flex:1,textAlign:"center"}}><div style={{fontSize:11,color:C.sub,marginBottom:6}}>{match.opponent||"상대팀"}</div><input type="number" min="0" value={resultIn.opp} onChange={e=>setResultIn({...resultIn,opp:e.target.value})} style={{...iS,textAlign:"center",fontSize:24,fontWeight:900,padding:"8px"}}/></div>
+                      </div>
+                      <div style={{display:"flex",gap:8}}>
+                        <button onClick={()=>{const our=parseInt(resultIn.our),opp=parseInt(resultIn.opp);if(isNaN(our)||isNaN(opp))return;const outcome=our>opp?"win":our<opp?"lose":"draw";db.ref("matches").set(matches.map(m=>m.id===match.id?{...m,result:{our,opp,outcome}}:m));addLog(`vs ${match.opponent||"상대팀"} ${our}-${opp} ${RL[outcome]}`);setResultEdit(null);setResultIn({our:"",opp:""}); }} style={{...btnT,flex:1,padding:"9px"}}>저장</button>
+                        <button onClick={()=>setResultEdit(null)} style={{...btnG}}>취소</button>
+                      </div>
+                    </div>
+                  )}
+                  <div style={{maxHeight:attendView===match.id?600:0,overflow:"hidden",transition:"max-height 0.3s"}}>
+                    <div style={{paddingTop:8}}>{members.map(m=><div key={m.id} style={{display:"flex",justifyContent:"space-between",padding:"5px 0",borderBottom:`1px solid ${C.border}`,fontSize:13}}><span>{m.name}</span><span style={{color:match.attendance?.[m.id]==="yes"?C.teal:match.attendance?.[m.id]==="no"?C.red:C.dim,fontWeight:700}}>{match.attendance?.[m.id]==="yes"?"참가":match.attendance?.[m.id]==="no"?"불참":"미응답"}</span></div>)}</div>
+                  </div>
+                  <div style={{display:"flex",gap:8,marginTop:10}}>
+                    <button onClick={()=>setAttendView(attendView===match.id?null:match.id)} style={{...btnG,flex:2}}>{attendView===match.id?"접기":"출석 체크"}</button>
+                    {isAdmin&&<button onClick={()=>{setResultEdit(resultEdit===match.id?null:match.id);setResultIn({our:match.result?.our??"",opp:match.result?.opp??""});}} style={{...btnG,flex:2}}>결과 {match.result?"수정":"입력"}</button>}
+                    {isAdmin&&<button onClick={()=>{if(confirm("삭제할까요?"))db.ref("matches").set(matches.filter(x=>x.id!==match.id));}} style={{...btnG,flex:1,color:C.red}}>🗑️</button>}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {tab==="notice"&&(
+          <div>
+            <div style={{fontSize:18,fontWeight:900,marginBottom:16}}>📢 공지사항</div>
+            {isAdmin&&<div style={{background:C.card,borderRadius:16,padding:16,marginBottom:14}}><textarea value={newNotice} onChange={e=>setNewNotice(e.target.value)} placeholder="공지 내용..." style={{...iS,minHeight:80,resize:"none",marginBottom:10}}/><button onClick={()=>{if(!newNotice.trim())return;const n={id:Date.now(),content:newNotice,author:user.name,time:"방금 전"};db.ref("notices").set([n,...notices]);addLog("공지 등록");setNewNotice("");}} style={btnT}>공지 올리기</button></div>}
+            {notices.map(n=><div key={n.id} style={{background:C.card,borderRadius:16,padding:16,marginBottom:10,borderLeft:`3px solid ${C.teal}`,position:"relative"}}><div style={{fontSize:14,color:"#eee",lineHeight:1.6,paddingRight:30}}>{n.content}</div><div style={{fontSize:11,color:C.sub,marginTop:8}}>{n.author} · {n.time}</div>{isAdmin&&<button onClick={()=>db.ref("notices").set(notices.filter(x=>x.id!==n.id))} style={{position:"absolute",top:12,right:12,background:"none",border:"none",color:C.dim,fontSize:18,cursor:"pointer"}}>✕</button>}</div>)}
+          </div>
+        )}
+
+        {tab==="chat"&&(
+          <div style={{display:"flex",flexDirection:"column",height:"calc(100vh - 160px)"}}>
+            <div style={{fontSize:18,fontWeight:900,marginBottom:12}}>💬 팀 대화</div>
+            <div style={{flex:1,overflowY:"auto",marginBottom:12}}>
+              {!chat.length&&<div style={{textAlign:"center",color:C.dim,fontSize:13,padding:"40px 0"}}>대화를 시작해보세요!</div>}
+              {chat.map(msg=>{const isMe=msg.senderId===myId;return(<div key={msg.id} style={{display:"flex",flexDirection:isMe?"row-reverse":"row",marginBottom:12,alignItems:"flex-end",gap:8}}><div style={{maxWidth:"72%"}}>{!isMe&&<div style={{fontSize:11,color:C.sub,marginBottom:4}}>{msg.senderName}</div>}<div style={{background:isMe?C.teal:C.card,borderRadius:isMe?"18px 18px 4px 18px":"18px 18px 18px 4px",padding:"10px 14px",fontSize:14,color:isMe?"#000":"#fff",wordBreak:"break-word"}}>{msg.content}</div><div style={{fontSize:10,color:C.dim,marginTop:3,textAlign:isMe?"right":"left"}}>{msg.time}</div></div></div>);})}
+              <div ref={chatEndRef}/>
+            </div>
+            <div style={{display:"flex",gap:8,paddingBottom:4}}>
+              <input value={chatMsg} onChange={e=>setChatMsg(e.target.value)} onKeyDown={e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();if(!chatMsg.trim())return;const now=new Date();const t=`오${now.getHours()<12?"전":"후"} ${String(now.getHours()%12||12).padStart(2,"0")}:${String(now.getMinutes()).padStart(2,"0")}`;db.ref("chat").set([...chat,{id:Date.now(),senderId:myId,senderName:user.name,content:chatMsg,time:t}]);setChatMsg("");}}} placeholder="메시지 입력..." style={{...iS,flex:1}}/>
+              <button onClick={()=>{if(!chatMsg.trim())return;const now=new Date();const t=`오${now.getHours()<12?"전":"후"} ${String(now.getHours()%12||12).padStart(2,"0")}:${String(now.getMinutes()).padStart(2,"0")}`;db.ref("chat").set([...chat,{id:Date.now(),senderId:myId,senderName:user.name,content:chatMsg,time:t}]);setChatMsg("");}} style={{...btnT,width:"auto",padding:"10px 20px",borderRadius:12}}>전송</button>
+            </div>
+          </div>
+        )}
+      </div>
+
+      <div style={{position:"fixed",bottom:0,left:"50%",transform:"translateX(-50%)",width:"100%",maxWidth:480,background:"#0d0d0d",borderTop:`1px solid ${C.border}`,display:"flex",padding:"6px 0 10px",zIndex:100}}>
+        {[["home","⚽","홈"],["manage","📋","관리"],["match","📅","경기"],["notice","📢","공지"],["chat","💬","대화"]].map(([key,icon,label])=>(
+          <button key={key} onClick={()=>setTab(key)} style={{flex:1,background:"none",border:"none",cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",gap:2,padding:"4px 0"}}>
+            <span style={{fontSize:22}}>{icon}</span>
+            <span style={{fontSize:9,fontWeight:tab===key?700:400,color:tab===key?C.teal:C.dim}}>{label}</span>
+          </button>
+        ))}
+      </div>
+    </div>
   );
 }
-
-function renderLogin(){
-  const wrap=div("",{style:{background:"#111",minHeight:"100vh",padding:24}});
-  if(S.pwModal){
-    const overlay=div("",{style:{position:"fixed",inset:0,background:"#000c",zIndex:999,display:"flex",alignItems:"center",justifyContent:"center",padding:20}});
-    const box=div("card",{style:{maxWidth:320,width:"100%",background:"#1e2235",border:"1px solid #2a2a2a"}},
-      el("div",{style:{fontSize:22,textAlign:"center",marginBottom:8}},"🔐"),
-      el("div",{style:{fontSize:16,fontWeight:900,textAlign:"center",marginBottom:4}},"관리자 확인"),
-      el("div",{style:{fontSize:12,color:C.sub,textAlign:"center",marginBottom:20}},"비밀번호 입력"),
-      inp({className:"input",type:"password",placeholder:"비밀번호",value:S.pwInput,style:{textAlign:"center",fontSize:20,letterSpacing:6,marginBottom:8},onInput:e=>setState({pwInput:e.target.value,pwErr:false}),onKeydown:e=>{if(e.key==="Enter")submitPw();}}),
-      S.pwErr?el("div",{style:{fontSize:12,color:C.red,textAlign:"center",marginBottom:8}},"비밀번호가 틀렸습니다"):null,
-      div("flex gap8",{style:{marginTop:4}},
-        btn("btn-ghost",{style:{flex:1},onClick:()=>setState({pwModal:false,pwInput:"",pwErr:false})},"취소"),
-        btn("btn-primary",{style:{flex:1},onClick:submitPw},"확인")
-      )
-    );
-    overlay.appendChild(box);
-    wrap.appendChild(overlay);
-  }
-  wrap.appendChild(div("",{style:{textAlign:"center",marginBottom:32,paddingTop:20}},
-    div("",{style:{width:72,height:72,borderRadius:"50%",background:`linear-gradient(135deg,${C.teal},${C.blue})`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:36,margin:"0 auto 16px"}},"⚽"),
-    el("div",{style:{fontSize:24,fontWeight:900}},"Ninetyz FC"),
-    el("div",{style:{fontSize:13,color:C.sub,marginTop:6}},"이름을 눌러 입장하세요")
-  ));
-  const grid=div("",{style:{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:10}});
-  S.members.forEach(m=>{
-    const b=btn("",{style:{background:"#1a1a1a",border:"1px solid #2a2a2a",borderRadius:14,padding:"14px 8px",color:"#fff",cursor:"pointer",textAlign:"center",fontFamily:"inherit"},onClick:()=>selectMember(m)},
-      el("div",{style:{fontSize:13,fontWeight:700}},m.name)
-    );
-    if(m.id===ADMIN_ID)b.appendChild(el("div",{style:{fontSize:10,color:C.teal,marginTop:3}},"🔐 관리자"));
-    if(m.status&&m.status!=="정상")b.appendChild(el("div",{style:{fontSize:10,color:m.status==="부상"?C.red:C.yellow,marginTop:3}},m.status));
-    grid.appendChild(b);
-  });
-  wrap.appendChild(grid);
-  return wrap;
-}
-
-function submitPw(){
-  if(S.pwInput===ADMIN_PW){
-    const m=S.members.find(x=>x.id===S.pendId);
-    setState({user:{id:S.pendId,name:m.name,isAdmin:true},pwModal:false,pwInput:"",pwErr:false});
-  } else setState({pwErr:true});
-}
-function selectMember(m){
-  if(m.id===ADMIN_ID)setState({pendId:m.id,pwModal:true,pwInput:"",pwErr:false});
-  else setState({user:{id:m.id,name:m.name,isAdmin:false}});
-}
-
-function renderMain(){
-  const isAdmin=S.user.isAdmin===true;
-  const myId=S.user.id;
-  const wrap=div("",{});
-  // 헤더
-  wrap.appendChild(div("header",{},
-    div("flex",{style:{justifyContent:"space-between",alignItems:"center"}},
-      div("flex",{style:{alignItems:"center",gap:12}},
-        div("",{style:{width:44,height:44,borderRadius:"50%",background:`linear-gradient(135deg,${C.teal},${C.blue})`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:22}},"⚽"),
-        div("",{},
-          el("div",{style:{fontWeight:900,fontSize:18}},"Ninetyz FC"),
-          el("div",{style:{fontSize:11,color:C.sub}},`멤버 ${S.members.length}명 · ${isAdmin?"관리자 ⚙️ ":""}${S.user.name}`)
-        )
-      ),
-      btn("btn-ghost",{style:{padding:"6px 14px",fontSize:12},onClick:()=>setState({user:null})},"로그아웃")
-    )
-  ));
-  // 탭 콘텐츠
-  const content=div("tab-content",{});
-  if(S.tab==="home")content.appendChild(renderHome(isAdmin,myId));
-  if(S.tab==="manage")content.appendChild(renderManage(isAdmin,myId));
-  if(S.tab==="match")content.appendChild(renderMatch(isAdmin,myId));
-  if(S.tab==="notice")content.appendChild(renderNotice(isAdmin));
-  if(S.tab==="chat")content.appendChild(renderChat(myId));
-  wrap.appendChild(content);
-  // 하단 탭
-  const tabs=[["home","⚽","홈"],["manage","📋","관리"],["match","📅","경기"],["notice","📢","공지"],["chat","💬","대화"]];
-  const nav=div("bottom-nav",{});
-  tabs.forEach(([key,icon,label])=>{
-    nav.appendChild(btn("nav-btn",{onClick:()=>setState({tab:key})},
-      el("span",{className:"nav-icon"},icon),
-      el("span",{className:"nav-label",style:{color:S.tab===key?C.teal:C.dim,fontWeight:S.tab===key?700:400}},label)
-    ));
-  });
-  wrap.appendChild(nav);
-  return wrap;
-}
-
-function renderHome(isAdmin,myId){
-  const thisDues=S.dues[MONTHS[0]]||{};
-  const paidCount=Object.values(thisDues).filter(d=>d&&d.paid).length;
-  const totalPaid=Object.values(thisDues).reduce((s,d)=>s+(d&&d.paid?d.amount:0),0);
-  const uniformCount=S.members.filter(m=>m.uniform).length;
-  const nextMatch=[...S.matches].filter(m=>!m.result).sort((a,b)=>a.date.localeCompare(b.date))[0];
-  const wrap=div("",{});
-  wrap.appendChild(div("",{style:{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:10,marginBottom:14}},
-    div("card",{style:{background:`linear-gradient(135deg,${C.teal}22,${C.teal}08)`,border:`1px solid ${C.teal}33`,padding:"14px 12px"}},
-      el("div",{style:{fontSize:11,color:C.teal,fontWeight:700,marginBottom:6}},mLabel(MONTHS[0])+" 회비"),
-      el("div",{style:{fontSize:28,fontWeight:900}},paidCount,el("span",{style:{fontSize:13,color:C.sub,fontWeight:400}},`/${S.members.length}`)),
-      el("div",{style:{fontSize:11,color:C.sub,marginTop:3}},totalPaid.toLocaleString()+"원")
-    ),
-    div("card",{style:{background:`linear-gradient(135deg,#0088ff22,#0088ff08)`,border:`1px solid #0088ff33`,padding:"14px 12px"}},
-      el("div",{style:{fontSize:11,color:C.blue,fontWeight:700,marginBottom:6}},"다음 경기"),
-      nextMatch?[el("div",{style:{fontSize:15,fontWeight:900}},nextMatch.date.slice(5).replace("-","/")),nextMatch.opponent?el("div",{style:{fontSize:11,color:C.sub,marginTop:3}},"vs "+nextMatch.opponent):null]:el("div",{style:{fontSize:13,color:C.sub,marginTop:6}},"일정 없음")
-    ),
-    div("card",{style:{background:`linear-gradient(135deg,${C.yellow}22,${C.yellow}08)`,border:`1px solid ${C.yellow}33`,padding:"14px 12px"}},
-      el("div",{style:{fontSize:11,color:C.yellow,fontWeight:700,marginBottom:6}},"유니폼"),
-      el("div",{style:{fontSize:28,fontWeight:900}},uniformCount,el("span",{style:{fontSize:13,color:C.sub,fontWeight:400}},`/${S.members.length}`))
-    )
-  ));
-  const done=S.matches.filter(m=>m.result);
-  if(done.length){
-    const w=done.filter(m=>m.result.outcome==="win").length,d2=done.filter(m=>m.result.outcome==="draw").length,l=done.filter(m=>m.result.outcome==="lose").length;
-    wrap.appendChild(div("card",{},
-      el("div",{style:{fontSize:13,color:C.sub,marginBottom:10}},"시즌 전적"),
-      div("flex",{style:{gap:24}},
-        ...[[w,C.teal,"승"],[d2,C.yellow,"무"],[l,C.red,"패"]].map(([n,c,lb])=>div("",{},el("div",{style:{fontSize:28,fontWeight:900,color:c}},n),el("div",{style:{fontSize:12,color:C.sub}},lb)))
-      )
-    ));
-  }
-  if(S.activity.length){
-    wrap.appendChild(div("card",{},
-      el("div",{style:{fontSize:13,color:C.sub,marginBottom:10}},"최근 활동"),
-      ...S.activity.slice(0,5).map(a=>div("flex",{style:{justifyContent:"space-between",marginBottom:8,fontSize:13}},
-        el("span",{},el("span",{style:{color:C.teal,marginRight:6}},"•"),a.msg),
-        el("span",{style:{color:C.dim,fontSize:11,marginLeft:8,whiteSpace:"nowrap"}},a.time)
-      ))
-    ));
-  }
-  const unpaid=S.members.filter(m=>!thisDues[m.id]?.paid);
-  wrap.appendChild(div("card",{},
-    el("div",{style:{fontSize:13,color:C.sub,marginBottom:10}},"이번달 미납"),
-    div("flex wrap",{style:{gap:6}},
-      ...unpaid.length?unpaid.map(m=>el("span",{style:{background:C.red+"22",border:`1px solid ${C.red}44`,borderRadius:20,padding:"3px 10px",fontSize:12,color:C.red}},m.name)):
-      [el("span",{style:{fontSize:13,color:C.teal}},"🎉 전원 납부 완료!")]
-    )
-  ));
-  return wrap;
-}
-
-function renderManage(isAdmin,myId){
-  const wrap=div("",{});
-  wrap.appendChild(div("subtab",{},
-    ...["dues","uniform","team"].map((k,i)=>{
-      const labels=["💰 회비","👕 유니폼","⚙️ 팀"];
-      return btn("subtab-btn"+(S.manTab===k?" active":""),{onClick:()=>setState({manTab:k})},labels[i]);
-    })
-  ));
-  if(S.manTab==="dues")wrap.appendChild(renderDues(isAdmin,myId));
-  if(S.manTab==="uniform")wrap.appendChild(renderUniform(isAdmin,myId));
-  if(S.manTab==="team")wrap.appendChild(renderTeam(isAdmin,myId));
-  return wrap;
-}
-
-function renderDues(isAdmin,myId){
-  const wrap=div("",{});
-  wrap.appendChild(div("flex wrap",{style:{gap:8,marginBottom:14}},
-    ...MONTHS.map(m=>btn("month-btn"+(S.dueMonth===m?" active":""),{onClick:()=>setState({dueMonth:m})},mLabel(m)))
-  ));
-  const md=S.dues[S.dueMonth]||{};
-  const pc=Object.values(md).filter(d=>d&&d.paid).length;
-  const tp=Object.values(md).reduce((s,d)=>s+(d&&d.paid?d.amount:0),0);
-  wrap.appendChild(div("card",{},
-    div("flex",{style:{justifyContent:"space-between",marginBottom:8}},
-      el("span",{style:{fontSize:13,color:C.sub}},mLabel(S.dueMonth)+" 납부 현황"),
-      el("span",{style:{fontSize:13,fontWeight:700,color:C.teal}},`${pc}/${S.members.length}명`)
-    ),
-    div("",{style:{background:"#333",borderRadius:99,height:6,overflow:"hidden",marginBottom:8}},
-      div("",{style:{width:`${S.members.length?pc/S.members.length*100:0}%`,height:"100%",background:`linear-gradient(90deg,${C.teal},${C.blue})`,borderRadius:99}})
-    ),
-    el("div",{style:{fontSize:12,color:C.sub}},"수령 "+tp.toLocaleString()+"원")
-  ));
-  const list=div("card",{},el("div",{style:{fontSize:14,fontWeight:700,marginBottom:14}},"멤버별 현황"));
-  S.members.forEach(m=>{
-    const mdue=(S.dues[S.dueMonth]||{})[m.id]||{paid:false,amount:0};
-    const isMe=m.id===myId;
-    const isEditing=S.editDue===m.id&&isAdmin;
-    const dots=MONTHS.map(mo=>(S.dues[mo]||{})[m.id]?.paid||false);
-    const row=div("",{style:{borderBottom:`1px solid #2a2a2a`,paddingBottom:12,marginBottom:12}});
-    row.appendChild(div("flex",{style:{justifyContent:"space-between",alignItems:"center",marginBottom:6}},
-      div("flex",{style:{alignItems:"center",gap:6}},
-        el("span",{style:{fontSize:14,fontWeight:700}},m.name),
-        m.id===ADMIN_ID?el("span",{className:"badge",style:{background:C.teal+"33",color:C.teal}},"관리자"):null,
-        isMe?el("span",{className:"badge",style:{background:C.blue+"33",color:C.blue}},"나"):null
-      ),
-      div("flex",{style:{gap:6,alignItems:"center"}},
-        el("span",{className:"badge",style:{background:mdue.paid?C.teal+"22":C.red+"22",color:mdue.paid?C.teal:C.red,border:`1px solid ${mdue.paid?C.teal+"44":C.red+"44"}`}},mdue.paid?"납부":"미납"),
-        isAdmin?btn("btn-ghost",{style:{padding:"3px 10px",fontSize:11},onClick:()=>setState({editDue:isEditing?null:m.id,editAmt:mdue.amount||"",editCustom:m.customStatus||""})},isEditing?"닫기":"수정"):null
-      )
-    ));
-    row.appendChild(div("flex",{style:{gap:5,marginBottom:4}},...dots.map(paid=>div("dot",{style:{background:paid?C.teal:C.red,opacity:paid?1:0.4}}))));
-    if(m.status&&m.status!=="정상")row.appendChild(el("span",{className:"badge",style:{background:(m.status==="부상"?C.red:C.yellow)+"22",color:m.status==="부상"?C.red:C.yellow,border:`1px solid ${(m.status==="부상"?C.red:C.yellow)}44`,marginBottom:4}},m.status));
-    if(m.customStatus)row.appendChild(el("div",{style:{fontSize:12,color:C.sub,marginTop:4}},m.customStatus));
-    if(isEditing){
-      const editBox=div("",{style:{background:"#222",borderRadius:12,padding:12,marginTop:10}});
-      const amtIn=inp({className:"input",type:"number",placeholder:"납부 금액",value:S.editAmt,style:{flex:1},onInput:e=>setState({editAmt:e.target.value})});
-      editBox.appendChild(div("flex gap8",{style:{marginBottom:10}},
-        amtIn,
-        btn("btn-primary",{style:{width:"auto",padding:"10px 16px"},onClick:()=>{
-          const amt=parseInt(S.editAmt)||0;
-          const newDues={...S.dues};
-          if(!newDues[S.dueMonth])newDues[S.dueMonth]={};
-          newDues[S.dueMonth]={...newDues[S.dueMonth],[m.id]:{paid:amt>0,amount:amt}};
-          fbSet("dues",newDues);addLog(`${m.name} ${mLabel(S.dueMonth)} ${amt>0?"납부":"미납"} 처리`);setState({editDue:null});
-        }},"저장"),
-        btn("btn-ghost",{style:{width:"auto",padding:"10px 12px"},onClick:()=>setState({editDue:null})},"취소")
-      ));
-      editBox.appendChild(el("div",{style:{fontSize:12,color:C.sub,marginBottom:8}},"상태"));
-      editBox.appendChild(div("flex gap8",{style:{marginBottom:10}},...["정상","부상","휴식"].map(s=>{
-        const col=s==="정상"?C.teal:s==="부상"?C.red:C.yellow;
-        return btn("",{style:{flex:1,background:m.status===s?col+"33":"#1a1a1a",border:`1px solid ${m.status===s?col+"66":"#2a2a2a"}`,borderRadius:10,padding:"7px",color:m.status===s?col:"#ccc",fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"inherit"},onClick:()=>{
-          const upd=S.members.map(p=>p.id===m.id?{...p,status:s}:p);fbSet("members",upd);addLog(`${m.name} 상태 → ${s}`);
-        }},s);
-      })));
-      const custIn=inp({className:"input",placeholder:"직접입력",value:S.editCustom,style:{flex:1},onInput:e=>setState({editCustom:e.target.value})});
-      editBox.appendChild(div("flex gap8",{},custIn,btn("btn-primary",{style:{width:"auto",padding:"10px 14px"},onClick:()=>{const upd=S.members.map(p=>p.id===m.id?{...p,customStatus:S.editCustom}:p);fbSet("members",upd);}},"적용")));
-      row.appendChild(editBox);
-    }
-    list.appendChild(row);
-  });
-  wrap.appendChild(list);
-  return wrap;
-}
-
-function renderUniform(isAdmin,myId){
-  const uniformCount=S.members.filter(m=>m.uniform).length;
-  const wrap=div("",{});
-  wrap.appendChild(div("card",{},
-    div("flex",{style:{justifyContent:"space-between",marginBottom:8}},
-      el("span",{style:{fontSize:13,color:C.sub}},"상의 사이즈 수집 현황"),
-      el("span",{style:{fontSize:13,fontWeight:700,color:C.yellow}},`${uniformCount}/${S.members.length}명`)
-    ),
-    div("",{style:{background:"#333",borderRadius:99,height:6,overflow:"hidden",marginBottom:8}},
-      div("",{style:{width:`${S.members.length?uniformCount/S.members.length*100:0}%`,height:"100%",background:`linear-gradient(90deg,${C.yellow},${C.teal})`,borderRadius:99}})
-    ),
-    el("div",{style:{fontSize:12,color:C.sub}},`미등록 ${S.members.length-uniformCount}명 남음`)
-  ));
-  const unpicked=S.members.filter(m=>!m.uniform);
-  if(unpicked.length)wrap.appendChild(div("card",{},
-    el("div",{style:{fontSize:12,color:C.yellow,fontWeight:700,marginBottom:10}},"미등록"),
-    div("flex wrap",{style:{gap:6}},...unpicked.map(m=>el("span",{style:{background:C.yellow+"22",border:`1px solid ${C.yellow}44`,borderRadius:20,padding:"3px 10px",fontSize:12,color:C.yellow}},m.name)))
-  ));
-  const list=div("card",{},el("div",{style:{fontSize:14,fontWeight:700,marginBottom:14}},"멤버별 사이즈"));
-  S.members.forEach(m=>{
-    const isMe=m.id===myId,canEdit=isAdmin||isMe;
-    const row=div("",{style:{borderBottom:`1px solid #2a2a2a`,paddingBottom:12,marginBottom:12}});
-    row.appendChild(div("flex",{style:{justifyContent:"space-between",alignItems:"center",marginBottom:canEdit?8:0}},
-      div("flex",{style:{alignItems:"center",gap:6}},
-        el("span",{style:{fontSize:14,fontWeight:700}},m.name),
-        isMe?el("span",{className:"badge",style:{background:C.blue+"33",color:C.blue}},"나"):null
-      ),
-      m.uniform?el("span",{style:{background:C.teal+"22",border:`1px solid ${C.teal}44`,borderRadius:20,padding:"4px 14px",fontSize:14,fontWeight:900,color:C.teal}},m.uniform):el("span",{style:{fontSize:12,color:C.dim}},"미등록")
-    ));
-    if(canEdit)row.appendChild(div("flex wrap",{style:{gap:6,marginTop:8}},...SIZES.map(s=>{
-      const isActive=m.uniform===s;
-      return btn("size-btn"+(isActive?" active":""),{onClick:()=>{const upd=S.members.map(p=>p.id===m.id?{...p,uniform:s}:p);fbSet("members",upd);addLog(`${m.name} 유니폼: ${s}`);}},s);
-    })));
-    list.appendChild(row);
-  });
-  wrap.appendChild(list);
-  if(uniformCount>0){
-    const cnt={};S.members.filter(m=>m.uniform).forEach(m=>{cnt[m.uniform]=(cnt[m.uniform]||0)+1;});
-    const agg=div("card",{},el("div",{style:{fontSize:14,fontWeight:700,marginBottom:14}},"📊 사이즈 집계"));
-    SIZES.filter(s=>cnt[s]).forEach(s=>{
-      agg.appendChild(div("flex",{style:{justifyContent:"space-between",alignItems:"center",padding:"8px 0",borderBottom:`1px solid #2a2a2a`}},
-        el("span",{style:{fontSize:14,fontWeight:700}},s),
-        div("flex",{style:{alignItems:"center",gap:10}},
-          div("",{style:{background:C.teal,borderRadius:99,height:6,width:cnt[s]*16}}),
-          el("span",{style:{fontSize:14,fontWeight:700,color:C.teal,minWidth:30,textAlign:"right"}},cnt[s]+"명")
-        )
-      ));
-    });
-    wrap.appendChild(agg);
-  }
-  return wrap;
-}
-
-function renderTeam(isAdmin,myId){
-  if(!isAdmin)return div("card",{style:{textAlign:"center",padding:"30px 20px"}},
-    el("div",{style:{fontSize:32,marginBottom:12}},"🔒"),
-    el("div",{style:{fontSize:14,fontWeight:700,marginBottom:6}},"관리자 전용"),
-    el("div",{style:{fontSize:12,color:C.sub}},"팀 관리는 관리자(김민형)만 접근 가능합니다")
-  );
-  const wrap=div("",{});
-  wrap.appendChild(div("flex",{style:{justifyContent:"space-between",alignItems:"center",marginBottom:12}},
-    el("span",{style:{fontSize:13,color:C.sub}},"멤버 목록"),
-    btn("btn-primary",{style:{width:"auto",padding:"7px 16px",fontSize:12,borderRadius:20},onClick:()=>setState({addMember:!S.addMember})},"+ 멤버 추가")
-  ));
-  if(S.addMember){
-    const nameIn=inp({className:"input",placeholder:"이름 입력",value:S.newMemberName,style:{flex:1},onInput:e=>setState({newMemberName:e.target.value})});
-    wrap.appendChild(div("card",{style:{border:`1px solid ${C.teal}44`}},div("flex gap8",{},nameIn,
-      btn("btn-primary",{style:{width:"auto",padding:"10px 14px"},onClick:()=>{
-        if(!S.newMemberName.trim())return;
-        const nm={id:Date.now(),name:S.newMemberName,status:"정상",customStatus:"",uniform:null};
-        const upd=[...S.members,nm];fbSet("members",upd);
-        const nd={...S.dues};MONTHS.forEach(m=>{if(!nd[m])nd[m]={};nd[m][nm.id]={paid:false,amount:0};});fbSet("dues",nd);
-        addLog(`멤버 추가: ${S.newMemberName}`);setState({newMemberName:"",addMember:false});
-      }},"추가"),
-      btn("btn-ghost",{style:{width:"auto",padding:"10px 12px"},onClick:()=>setState({addMember:false})},"취소")
-    )));
-  }
-  const list=div("card",{style:{padding:"4px 0"}});
-  S.members.forEach(m=>{
-    list.appendChild(div("flex",{style:{justifyContent:"space-between",alignItems:"center",padding:"14px 16px",borderBottom:`1px solid #2a2a2a`}},
-      div("flex",{style:{alignItems:"center",gap:8}},
-        el("span",{style:{fontSize:15,fontWeight:600}},m.name),
-        m.id===ADMIN_ID?el("span",{className:"badge",style:{background:C.teal+"33",color:C.teal}},"관리자"):null,
-        m.id===myId?el("span",{className:"badge",style:{background:C.blue+"33",color:C.blue}},"나"):null,
-        m.status&&m.status!=="정상"?el("span",{className:"badge",style:{background:(m.status==="부상"?C.red:C.yellow)+"22",color:m.status==="부상"?C.red:C.yellow}},m.status):null
-      ),
-      m.id!==ADMIN_ID?btn("",{style:{background:C.red+"22",border:`1px solid ${C.red}44`,borderRadius:10,padding:"4px 12px",color:C.red,fontSize:12,fontWeight:700,cursor:"pointer"},onClick:()=>{if(confirm(`${m.name}님을 삭제할까요?`)){fbSet("members",S.members.filter(x=>x.id!==m.id));addLog(`멤버 삭제: ${m.name}`);}}},"삭제"):null
-    ));
-  });
-  wrap.appendChild(list);
-  return wrap;
-}
-
-function renderMatch(isAdmin,myId){
-  const wrap=div("",{});
-  wrap.appendChild(div("flex",{style:{justifyContent:"space-between",alignItems:"center",marginBottom:16}},
-    el("div",{style:{fontSize:18,fontWeight:900}},"📅 경기 일정"),
-    isAdmin?btn("btn-primary",{style:{width:"auto",padding:"8px 16px",fontSize:13,borderRadius:20},onClick:()=>setState({showAddMatch:!S.showAddMatch})},"+ 일정 추가"):null
-  ));
-  if(isAdmin&&S.showAddMatch){
-    const nm=S.newMatch;
-    const dIn=inp({className:"input",type:"date",value:nm.date,onInput:e=>setState({newMatch:{...S.newMatch,date:e.target.value}})});
-    const tIn=inp({className:"input",type:"time",value:nm.time,onInput:e=>setState({newMatch:{...S.newMatch,time:e.target.value}})});
-    const lIn=inp({className:"input",placeholder:"경기 장소 *",value:nm.location,onInput:e=>setState({newMatch:{...S.newMatch,location:e.target.value}})});
-    const oIn=inp({className:"input",placeholder:"상대팀 이름 (선택)",value:nm.opponent,onInput:e=>setState({newMatch:{...S.newMatch,opponent:e.target.value}})});
-    wrap.appendChild(div("card",{style:{border:`1px solid ${C.teal}44`,marginBottom:14}},
-      el("div",{style:{fontSize:13,fontWeight:700,color:C.teal,marginBottom:12}},"새 경기 추가"),
-      div("flex gap8",{style:{marginBottom:8}},dIn,tIn),
-      div("",{style:{marginBottom:8}},lIn),
-      div("",{style:{marginBottom:10}},oIn),
-      div("flex gap8",{},
-        btn("btn-primary",{style:{flex:1,padding:"10px"},onClick:()=>{
-          if(!S.newMatch.date||!S.newMatch.time||!S.newMatch.location)return;
-          const m={id:Date.now(),...S.newMatch,attendance:{},result:null};
-          const upd=[...S.matches,m].sort((a,b)=>a.date.localeCompare(b.date));
-          fbSet("matches",upd);addLog(`경기 추가: ${m.date.slice(5).replace("-","/")} ${m.opponent?"vs "+m.opponent:""}`);
-          setState({newMatch:{date:"",time:"",location:"",opponent:""},showAddMatch:false});
-        }},"추가하기"),
-        btn("btn-ghost",{onClick:()=>setState({showAddMatch:false})},"취소")
-      )
-    ));
-  }
-  if(!S.matches.length)wrap.appendChild(el("div",{style:{textAlign:"center",color:C.dim,fontSize:13,padding:"40px 0"}},"등록된 경기 일정이 없습니다"));
-  [...S.matches].sort((a,b)=>a.date.localeCompare(b.date)).forEach(match=>{
-    const going=S.members.filter(m=>match.attendance&&match.attendance[m.id]==="yes");
-    const pending=S.members.filter(m=>!match.attendance||!match.attendance[m.id]);
-    const myVote=match.attendance&&match.attendance[myId];
-    const RC={win:C.teal,lose:C.red,draw:C.yellow},RL={win:"승",lose:"패",draw:"무"};
-    const card=div("card",{});
-    card.appendChild(div("flex",{style:{justifyContent:"space-between",alignItems:"flex-start",marginBottom:10}},
-      div("",{},
-        div("flex",{style:{alignItems:"center",gap:8}},
-          el("span",{style:{fontSize:17,fontWeight:900}},match.date.slice(5).replace("-","/")+` ${match.time}`),
-          match.result?el("span",{className:"badge",style:{background:RC[match.result.outcome]+"22",color:RC[match.result.outcome],border:`1px solid ${RC[match.result.outcome]}44`}},RL[match.result.outcome]):null
-        ),
-        el("div",{style:{fontSize:12,color:C.sub,marginTop:4}},"📍 "+match.location+(match.opponent?el("span",{style:{color:C.blue,marginLeft:8}}," vs "+match.opponent):""))
-      ),
-      div("",{style:{textAlign:"right"}},
-        match.result?el("div",{style:{fontSize:24,fontWeight:900,color:RC[match.result.outcome]}},`${match.result.our} - ${match.result.opp}`):
-        div("",{},el("div",{style:{fontSize:13,color:C.teal,fontWeight:700}},`참가 ${going.length}명`),el("div",{style:{fontSize:11,color:C.dim}},`미응답 ${pending.length}명`))
-      )
-    ));
-    if(!match.result)card.appendChild(div("flex gap8",{style:{marginBottom:10}},...["yes","no"].map(v=>{
-      const active=myVote===v;
-      return btn("",{style:{flex:1,padding:"8px",borderRadius:10,fontSize:13,fontWeight:700,cursor:"pointer",border:`1px solid ${v==="yes"?C.teal+"44":C.red+"44"}`,background:active?(v==="yes"?C.teal:C.red):"transparent",color:active?"#000":(v==="yes"?C.teal:C.red),fontFamily:"inherit"},onClick:()=>{const upd=S.matches.map(m=>m.id===match.id?{...m,attendance:{...(m.attendance||{}),[myId]:v}}:m);fbSet("matches",upd);}},v==="yes"?"✅ 참가":"❌ 불참");
-    })));
-    if(isAdmin&&S.resultEdit===match.id){
-      const ourIn=inp({className:"input",type:"number",value:S.resultIn.our,style:{textAlign:"center",fontSize:24,fontWeight:900,padding:"8px"},onInput:e=>setState({resultIn:{...S.resultIn,our:e.target.value}})});
-      const oppIn=inp({className:"input",type:"number",value:S.resultIn.opp,style:{textAlign:"center",fontSize:24,fontWeight:900,padding:"8px"},onInput:e=>setState({resultIn:{...S.resultIn,opp:e.target.value}})});
-      card.appendChild(div("",{style:{background:"#222",borderRadius:12,padding:12,marginBottom:10}},
-        div("flex",{style:{alignItems:"center",gap:12,marginBottom:10}},
-          div("",{style:{flex:1,textAlign:"center"}},el("div",{style:{fontSize:11,color:C.sub,marginBottom:6}},"우리팀"),ourIn),
-          el("span",{style:{fontSize:20,color:C.dim,fontWeight:900,paddingTop:20}},":"),
-          div("",{style:{flex:1,textAlign:"center"}},el("div",{style:{fontSize:11,color:C.sub,marginBottom:6}},match.opponent||"상대팀"),oppIn)
-        ),
-        div("flex gap8",{},
-          btn("btn-primary",{style:{flex:1,padding:"9px"},onClick:()=>{
-            const our=parseInt(S.resultIn.our),opp=parseInt(S.resultIn.opp);if(isNaN(our)||isNaN(opp))return;
-            const outcome=our>opp?"win":our<opp?"lose":"draw";
-            const upd=S.matches.map(m=>m.id===match.id?{...m,result:{our,opp,outcome}}:m);
-            fbSet("matches",upd);addLog(`vs ${match.opponent||"상대팀"} ${our}-${opp} ${RL[outcome]}`);setState({resultEdit:null,resultIn:{our:"",opp:""}});
-          }},"저장"),
-          btn("btn-ghost",{onClick:()=>setState({resultEdit:null})},"취소")
-        )
-      ));
-    }
-    const attendBox=div("",{style:{maxHeight:S.attendView===match.id?"600px":"0",overflow:"hidden",transition:"max-height 0.3s"}});
-    attendBox.appendChild(div("",{style:{paddingTop:8}},...S.members.map(m=>div("flex",{style:{justifyContent:"space-between",padding:"5px 0",borderBottom:`1px solid #2a2a2a`,fontSize:13}},
-      el("span",{},m.name),
-      el("span",{style:{color:match.attendance&&match.attendance[m.id]==="yes"?C.teal:match.attendance&&match.attendance[m.id]==="no"?C.red:C.dim,fontWeight:700}},
-        match.attendance&&match.attendance[m.id]==="yes"?"참가":match.attendance&&match.attendance[m.id]==="no"?"불참":"미응답")
-    ))));
-    card.appendChild(attendBox);
-    card.appendChild(div("flex gap8",{style:{marginTop:10}},
-      btn("btn-ghost",{style:{flex:2},onClick:()=>setState({attendView:S.attendView===match.id?null:match.id})},S.attendView===match.id?"접기":"출석 체크"),
-      isAdmin?btn("btn-ghost",{style:{flex:2},onClick:()=>setState({resultEdit:S.resultEdit===match.id?null:match.id,resultIn:{our:match.result?.our??"",opp:match.result?.opp??""}})},"결과 "+(match.result?"수정":"입력")):null,
-      isAdmin?btn("btn-ghost",{style:{flex:1,color:C.red},onClick:()=>{if(confirm("삭제할까요?"))fbSet("matches",S.matches.filter(x=>x.id!==match.id));}},"🗑️"):null
-    ));
-    wrap.appendChild(card);
-  });
-  return wrap;
-}
-
-function renderNotice(isAdmin){
-  const wrap=div("",{});
-  wrap.appendChild(el("div",{style:{fontSize:18,fontWeight:900,marginBottom:16}},"📢 공지사항"));
-  if(isAdmin){
-    const ta=txt({className:"input",placeholder:"공지 내용...",style:{marginBottom:10},onInput:e=>setState({newNotice:e.target.value})});
-    ta.value=S.newNotice;
-    wrap.appendChild(div("card",{style:{marginBottom:14}},ta,
-      btn("btn-primary",{onClick:()=>{
-        if(!S.newNotice.trim())return;
-        const n={id:Date.now(),content:S.newNotice,author:S.user.name,time:"방금 전"};
-        fbSet("notices",[n,...S.notices]);addLog("공지 등록");setState({newNotice:""});
-      }},"공지 올리기")
-    ));
-  }
-  S.notices.forEach(n=>{
-    const card=div("card",{style:{borderLeft:`3px solid ${C.teal}`,position:"relative",marginBottom:10}});
-    card.appendChild(el("div",{style:{fontSize:14,color:"#eee",lineHeight:1.6,paddingRight:30}},n.content));
-    card.appendChild(el("div",{style:{fontSize:11,color:C.sub,marginTop:8}},n.author+" · "+n.time));
-    if(isAdmin)card.appendChild(btn("",{style:{position:"absolute",top:12,right:12,background:"none",border:"none",color:C.dim,fontSize:18,cursor:"pointer"},onClick:()=>fbSet("notices",S.notices.filter(x=>x.id!==n.id))},"✕"));
-    wrap.appendChild(card);
-  });
-  return wrap;
-}
-
-function renderChat(myId){
-  const wrap=div("",{style:{display:"flex",flexDirection:"column",height:"calc(100vh - 160px)"}});
-  wrap.appendChild(el("div",{style:{fontSize:18,fontWeight:900,marginBottom:12}},"💬 팀 대화"));
-  const msgArea=div("",{style:{flex:1,overflowY:"auto",marginBottom:12}});
-  if(!S.chat.length)msgArea.appendChild(el("div",{style:{textAlign:"center",color:C.dim,fontSize:13,padding:"40px 0"}},"대화를 시작해보세요!"));
-  S.chat.forEach(msg=>{
-    const isMe=msg.senderId===myId;
-    const row=div("flex",{style:{flexDirection:isMe?"row-reverse":"row",marginBottom:12,alignItems:"flex-end",gap:8}});
-    const inner=div("",{style:{maxWidth:"72%"}});
-    if(!isMe)inner.appendChild(el("div",{style:{fontSize:11,color:C.sub,marginBottom:4}},msg.senderName));
-    inner.appendChild(el("div",{className:"chat-bubble",style:{background:isMe?C.teal:"#1a1a1a",borderRadius:isMe?"18px 18px 4px 18px":"18px 18px 18px 4px",color:isMe?"#000":"#fff"}},msg.content));
-    inner.appendChild(el("div",{style:{fontSize:10,color:C.dim,marginTop:3,textAlign:isMe?"right":"left"}},msg.time));
-    row.appendChild(inner);msgArea.appendChild(row);
-  });
-  msgArea.appendChild(el("div",{id:"chat-end"}));
-  wrap.appendChild(msgArea);
-  const msgIn=inp({className:"input",placeholder:"메시지 입력...",value:S.chatMsg,style:{flex:1},onInput:e=>setState({chatMsg:e.target.value}),onKeydown:e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();sendChat(myId);}}});
-  wrap.appendChild(div("flex gap8",{style:{paddingBottom:4}},msgIn,btn("btn-primary",{style:{width:"auto",padding:"10px 20px",borderRadius:12},onClick:()=>sendChat(myId)},"전송")));
-  return wrap;
-}
-function sendChat(myId){
-  if(!S.chatMsg.trim())return;
-  const now=new Date();const t=`오${now.getHours()<12?"전":"후"} ${String(now.getHours()%12||12).padStart(2,"0")}:${String(now.getMinutes()).padStart(2,"0")}`;
-  fbSet("chat",[...S.chat,{id:Date.now(),senderId:myId,senderName:S.user.name,content:S.chatMsg,time:t}]);
-  setState({chatMsg:""});
-}
-
-// 초기 렌더
-render();
+ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
 </script>
 </body>
 </html>
+
