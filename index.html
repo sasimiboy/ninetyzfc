@@ -111,7 +111,7 @@ function App(){
   const myId=user?.id;
 
   useEffect(()=>{
-    let done={members:false,dues:false,matches:false,notices:false,chat:false,actLog:false};
+    let done={members:false,dues:false,matches:false,notices:false,actLog:false};
     function chk(){if(Object.values(done).every(Boolean))setLoading(false);}
     db.ref("members").on("value",s=>{const v=s.val();if(v)setMembers(toArr(v));else db.ref("members").set(INIT_MEMBERS);done.members=true;chk();});
     db.ref("dues").on("value",s=>{const v=s.val();if(v)setDues(v);else db.ref("dues").set(initDues(INIT_MEMBERS));done.dues=true;chk();});
