@@ -85,7 +85,6 @@ function App(){
   const [dues,setDues]=useState({});
   const [matches,setMatches]=useState([]);
   const [notices,setNotices]=useState([]);
-  const [chat,setChat]=useState([]);
   const [activity,setActivity]=useState([]);
   const [user,setUser]=useState(load("nfc_user")||null);
   const [pwModal,setPwModal]=useState(false);
@@ -104,10 +103,8 @@ function App(){
   const [showAddMatch,setShowAddMatch]=useState(false);
   const [newMatch,setNewMatch]=useState({date:"",time:"",location:"",opponent:""});
   const [newNotice,setNewNotice]=useState("");
-  const [chatMsg,setChatMsg]=useState("");
   const [addMember,setAddMember]=useState(false);
   const [newMemberName,setNewMemberName]=useState("");
-  const chatEndRef=useRef(null);
   const actRef=useRef([]);
 
   const isAdmin=user?.isAdmin===true;
@@ -120,13 +117,11 @@ function App(){
     db.ref("dues").on("value",s=>{const v=s.val();if(v)setDues(v);else db.ref("dues").set(initDues(INIT_MEMBERS));done.dues=true;chk();});
     db.ref("matches").on("value",s=>{setMatches(s.val()?toArr(s.val()):[]);done.matches=true;chk();});
     db.ref("notices").on("value",s=>{setNotices(s.val()?toArr(s.val()):[]);done.notices=true;chk();});
-    db.ref("chat").on("value",s=>{setChat(s.val()?toArr(s.val()):[]);done.chat=true;chk();});
     db.ref("actLog").on("value",s=>{const a=s.val()?toArr(s.val()):[];setActivity(a);actRef.current=a;done.actLog=true;chk();});
-    return()=>["members","dues","matches","notices","chat","actLog"].forEach(k=>db.ref(k).off());
+    return()=>["members","dues","matches","notices","actLog"].forEach(k=>db.ref(k).off());
   },[]);
 
   useEffect(()=>{try{if(user)localStorage.setItem("nfc_user",JSON.stringify(user));else localStorage.removeItem("nfc_user");}catch(e){}},[user]);
-  useEffect(()=>{if(tab==="chat")setTimeout(()=>chatEndRef.current?.scrollIntoView({behavior:"smooth"}),100);},[chat,tab]);
 
   function addLog(msg){db.ref("actLog").set([{id:Date.now(),msg,time:"방금 전"},...actRef.current.slice(0,19)]);}
   function selectMember(m){if(m.id===ADMIN_ID){setPendId(m.id);setPwModal(true);setPwInput("");setPwErr(false);}else setUser({id:m.id,name:m.name,isAdmin:false});}
@@ -424,24 +419,10 @@ function App(){
           </div>
         )}
 
-        {tab==="chat"&&(
-          <div style={{display:"flex",flexDirection:"column",height:"calc(100vh - 160px)"}}>
-            <div style={{fontSize:18,fontWeight:900,marginBottom:12}}>💬 팀 대화</div>
-            <div style={{flex:1,overflowY:"auto",marginBottom:12}}>
-              {!chat.length&&<div style={{textAlign:"center",color:C.dim,fontSize:13,padding:"40px 0"}}>대화를 시작해보세요!</div>}
-              {chat.map(msg=>{const isMe=msg.senderId===myId;return(<div key={msg.id} style={{display:"flex",flexDirection:isMe?"row-reverse":"row",marginBottom:12,alignItems:"flex-end",gap:8}}><div style={{maxWidth:"72%"}}>{!isMe&&<div style={{fontSize:11,color:C.sub,marginBottom:4}}>{msg.senderName}</div>}<div style={{background:isMe?C.teal:C.card,borderRadius:isMe?"18px 18px 4px 18px":"18px 18px 18px 4px",padding:"10px 14px",fontSize:14,color:isMe?"#000":"#fff",wordBreak:"break-word"}}>{msg.content}</div><div style={{fontSize:10,color:C.dim,marginTop:3,textAlign:isMe?"right":"left"}}>{msg.time}</div></div></div>);})}
-              <div ref={chatEndRef}/>
-            </div>
-            <div style={{display:"flex",gap:8,paddingBottom:4}}>
-              <input value={chatMsg} onChange={e=>setChatMsg(e.target.value)} onKeyDown={e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();if(!chatMsg.trim())return;const now=new Date();const t=`오${now.getHours()<12?"전":"후"} ${String(now.getHours()%12||12).padStart(2,"0")}:${String(now.getMinutes()).padStart(2,"0")}`;db.ref("chat").set([...chat,{id:Date.now(),senderId:myId,senderName:user.name,content:chatMsg,time:t}]);setChatMsg("");}}} placeholder="메시지 입력..." style={{...iS,flex:1}}/>
-              <button onClick={()=>{if(!chatMsg.trim())return;const now=new Date();const t=`오${now.getHours()<12?"전":"후"} ${String(now.getHours()%12||12).padStart(2,"0")}:${String(now.getMinutes()).padStart(2,"0")}`;db.ref("chat").set([...chat,{id:Date.now(),senderId:myId,senderName:user.name,content:chatMsg,time:t}]);setChatMsg("");}} style={{...btnT,width:"auto",padding:"10px 20px",borderRadius:12}}>전송</button>
-            </div>
-          </div>
-        )}
       </div>
 
       <div style={{position:"fixed",bottom:0,left:"50%",transform:"translateX(-50%)",width:"100%",maxWidth:480,background:"#0d0d0d",borderTop:`1px solid ${C.border}`,display:"flex",padding:"6px 0 10px",zIndex:100}}>
-        {[["home","⚽","홈"],["manage","📋","관리"],["match","📅","경기"],["notice","📢","공지"],["chat","💬","대화"]].map(([key,icon,label])=>(
+        {[["home","⚽","홈"],["manage","📋","관리"],["match","📅","경기"],["notice","📢","공지"]].map(([key,icon,label])=>(
           <button key={key} onClick={()=>setTab(key)} style={{flex:1,background:"none",border:"none",cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",gap:2,padding:"4px 0"}}>
             <span style={{fontSize:22}}>{icon}</span>
             <span style={{fontSize:9,fontWeight:tab===key?700:400,color:tab===key?C.teal:C.dim}}>{label}</span>
