@@ -41,11 +41,11 @@ const SIZES=["XS","S","M","L","XL","XXL","3XL"];
 const C={bg:"#111",card:"#1a1a1a",card2:"#222",teal:"#00d4a0",blue:"#0088ff",red:"#e05555",yellow:"#e0a030",border:"#2a2a2a",sub:"#888",dim:"#555"};
 
 function getMonths(n=5){
-  const res=[],now=new Date(2026,6,1);
+  const res=[],now=new Date(2026,7,1);
   for(let i=0;i<n;i++){const d=new Date(now.getFullYear(),now.getMonth()-i,1);res.push(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}`);}
   return res;
 }
-const MONTHS=getMonths(2);
+const MONTHS=getMonths(3);
 function mLabel(m){const[y,mo]=m.split("-");return `${y}년 ${+mo}월`;}
 
 const INIT_MEMBERS=[
