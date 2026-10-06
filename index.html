@@ -9,7 +9,7 @@
   <script src="https://cdn.jsdelivr.net/npm/firebase@8.10.1/firebase-app.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/firebase@8.10.1/firebase-database.min.js"></script>
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&display=swap" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Barlow+Condensed:wght@900&family=Noto+Sans+KR:wght@400;500;700;900&display=swap" rel="stylesheet"/>
   <style>
     *{margin:0;padding:0;box-sizing:border-box;}
     body{background:#07000f;font-family:'Noto Sans KR',sans-serif;color:#fff;}
@@ -17,6 +17,28 @@
     input[type=time]::-webkit-calendar-picker-indicator{filter:invert(1);}
     ::-webkit-scrollbar{width:0;}
     .glass{background:linear-gradient(135deg,rgba(168,85,247,0.12),rgba(109,40,217,0.06));backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);}
+
+    /* MVP Card */
+    @keyframes shimmer-slide{0%{transform:translateX(-120%) rotate(20deg);}100%{transform:translateX(220%) rotate(20deg);}}
+    @keyframes glow-pulse{0%,100%{opacity:0.4;}50%{opacity:0.9;}}
+    .mvp-card{width:205px;border-radius:18px 18px 50% 50%/18px 18px 45px 45px;transform:perspective(900px) rotateX(7deg) rotateY(-5deg);background:linear-gradient(128deg,rgba(255,255,255,0.14) 0%,rgba(255,255,255,0.04) 28%,transparent 50%),linear-gradient(195deg,#200068 0%,#3c00a0 22%,#1a0060 52%,#06001a 100%);box-shadow:0 0 0 1.5px rgba(180,100,255,0.55),0 2px 0 2px rgba(120,60,200,0.35),0 4px 20px rgba(80,0,160,0.7),0 8px 40px rgba(50,0,120,0.5),inset 0 1px 0 rgba(255,255,255,0.18),inset 0 -1px 0 rgba(0,0,0,0.5),0 20px 60px rgba(100,0,200,0.25);overflow:hidden;position:relative;cursor:pointer;transition:transform 0.12s ease;user-select:none;-webkit-user-select:none;}
+    .hex-layer{position:absolute;inset:0;background-image:url("data:image/svg+xml,%3Csvg width='22' height='19' viewBox='0 0 22 19' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M11 1 L20 5.5 L20 13.5 L11 18 L2 13.5 L2 5.5 Z' fill='none' stroke='white' stroke-width='0.5'/%3E%3C/svg%3E");background-size:22px 19px;opacity:0.07;pointer-events:none;}
+    .shimmer-layer{position:absolute;inset:0;background:linear-gradient(110deg,transparent 30%,rgba(255,255,255,0.12) 50%,transparent 70%);animation:shimmer-slide 3.5s ease-in-out infinite;pointer-events:none;}
+    .stadium-glow{position:absolute;bottom:-20px;left:50%;transform:translateX(-50%);width:120px;height:60px;background:radial-gradient(ellipse,rgba(160,80,255,0.5) 0%,transparent 70%);pointer-events:none;animation:glow-pulse 2s ease-in-out infinite;}
+    .bevel-top{position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent 5%,rgba(255,255,255,0.35) 30%,rgba(255,255,255,0.5) 50%,rgba(255,255,255,0.35) 70%,transparent 95%);pointer-events:none;}
+    .card-inner{padding:14px 14px 20px;}
+    .card-top-row{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:2px;}
+    .ap-num{font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:46px;line-height:1;color:#fff;text-shadow:0 0 18px rgba(200,120,255,0.8),0 2px 8px rgba(0,0,0,0.6);}
+    .ap-lbl{font-family:'Barlow Condensed',sans-serif;font-size:9px;font-weight:900;letter-spacing:2px;color:rgba(200,140,255,0.75);}
+    .logo-wrap{width:34px;height:34px;display:flex;align-items:center;justify-content:center;}
+    .player-name-kr{font-family:'Black Han Sans',sans-serif;font-size:43px;letter-spacing:6px;text-align:center;color:#fff;text-shadow:0 0 32px rgba(200,120,255,0.78),0 0 12px rgba(180,80,255,0.5),0 2px 8px rgba(0,0,0,0.8);margin:5px 0 16px;line-height:1.1;}
+    .glow-line{height:1px;background:linear-gradient(90deg,transparent,rgba(180,100,255,0.6),rgba(232,121,249,0.8),rgba(180,100,255,0.6),transparent);margin:0 8px 14px;box-shadow:0 0 8px rgba(200,100,255,0.5);}
+    .stats-row{display:flex;justify-content:center;gap:24px;}
+    .stat-col{text-align:center;}
+    .stat-n{font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:42px;line-height:1;}
+    .stat-n.gol{color:#e4b4ff;text-shadow:0 0 14px rgba(200,100,255,0.7);}
+    .stat-n.ast{color:#7dd3fc;text-shadow:0 0 14px rgba(96,165,250,0.7);}
+    .stat-l{font-family:'Barlow Condensed',sans-serif;font-size:9px;font-weight:900;letter-spacing:2px;color:rgba(200,160,255,0.65);}
   </style>
 </head>
 <body>
@@ -39,19 +61,10 @@ const db = window._db;
 
 const ADMIN_ID=1,ADMIN_PW="1886",DUE_AMT=20000;
 const C={
-  bg:"#07000f",
-  card:"#100020",
-  card2:"#180030",
-  purple:"#c084fc",
-  purple2:"#7c3aed",
-  pink:"#e879f9",
-  red:"#f87171",
-  yellow:"#fbbf24",
-  border:"#3b0764",
-  sub:"#a78bca",
-  dim:"#6d3f9e"
+  bg:"#07000f",card:"#100020",card2:"#180030",
+  purple:"#c084fc",purple2:"#7c3aed",pink:"#e879f9",
+  red:"#f87171",yellow:"#fbbf24",border:"#3b0764",sub:"#a78bca",dim:"#6d3f9e"
 };
-
 const LOGO_SRC="./나인티즈_로고.png";
 
 function getMonths(n=12){
@@ -94,6 +107,54 @@ function StatusBadge({status}){
   return <span style={{padding:"2px 8px",borderRadius:20,fontSize:11,fontWeight:700,background:col+"22",color:col,border:`1px solid ${col}44`}}>{status}</span>;
 }
 
+function MvpCard({name,gol,ast}){
+  const cardRef=useRef(null);
+  const ap=gol+ast;
+  function handleMove(e){
+    const card=cardRef.current;if(!card)return;
+    const r=card.getBoundingClientRect();
+    const src=e.touches?e.touches[0]:e;
+    const dx=(src.clientX-r.left-r.width/2)/(r.width/2);
+    const dy=(src.clientY-r.top-r.height/2)/(r.height/2);
+    card.style.transform=`perspective(900px) rotateX(${-dy*12}deg) rotateY(${dx*12}deg) scale(1.04)`;
+  }
+  function handleLeave(){
+    const card=cardRef.current;if(!card)return;
+    card.style.transform="perspective(900px) rotateX(7deg) rotateY(-5deg)";
+  }
+  return(
+    <div className="mvp-card" ref={cardRef} onMouseMove={handleMove} onMouseLeave={handleLeave} onTouchMove={handleMove} onTouchEnd={handleLeave}>
+      <div className="hex-layer"/>
+      <div className="shimmer-layer"/>
+      <div className="stadium-glow"/>
+      <div className="bevel-top"/>
+      <div className="card-inner">
+        <div className="card-top-row">
+          <div>
+            <div className="ap-num">{ap}</div>
+            <div className="ap-lbl">ATTACK PT</div>
+          </div>
+          <div className="logo-wrap">
+            <img src={LOGO_SRC} style={{width:34,height:34,objectFit:"contain",filter:"drop-shadow(0 0 6px rgba(157,0,224,0.5))"}}/>
+          </div>
+        </div>
+        <div className="player-name-kr">{name}</div>
+        <div className="glow-line"/>
+        <div className="stats-row">
+          <div className="stat-col">
+            <div className="stat-n gol">{gol}</div>
+            <div className="stat-l">GOL</div>
+          </div>
+          <div className="stat-col">
+            <div className="stat-n ast">{ast}</div>
+            <div className="stat-l">AST</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function App(){
   const [loading,setLoading]=useState(true);
   const [members,setMembers]=useState([]);
@@ -119,20 +180,23 @@ function App(){
   const [addMember,setAddMember]=useState(false);
   const [newMemberName,setNewMemberName]=useState("");
   const [goalMatch,setGoalMatch]=useState("");
+  const [assists,setAssists]=useState({});
+  const [assistMatch,setAssistMatch]=useState("");
   const actRef=useRef([]);
 
   const isAdmin=user?.isAdmin===true;
   const myId=user?.id;
 
   useEffect(()=>{
-    let done={members:false,dues:false,matches:false,goals:false,actLog:false};
+    let done={members:false,dues:false,matches:false,goals:false,assists:false,actLog:false};
     function chk(){if(Object.values(done).every(Boolean))setLoading(false);}
     db.ref("members").on("value",s=>{const v=s.val();if(v)setMembers(toArr(v));else db.ref("members").set(INIT_MEMBERS);done.members=true;chk();});
     db.ref("dues").on("value",s=>{const v=s.val();if(v)setDues(v);else db.ref("dues").set(initDues(INIT_MEMBERS));done.dues=true;chk();});
     db.ref("matches").on("value",s=>{setMatches(s.val()?toArr(s.val()):[]);done.matches=true;chk();});
     db.ref("goals").on("value",s=>{setGoals(s.val()||{});done.goals=true;chk();});
+    db.ref("assists").on("value",s=>{setAssists(s.val()||{});done.assists=true;chk();});
     db.ref("actLog").on("value",s=>{const a=s.val()?toArr(s.val()):[];setActivity(a);actRef.current=a;done.actLog=true;chk();});
-    return()=>["members","dues","matches","goals","actLog"].forEach(k=>db.ref(k).off());
+    return()=>["members","dues","matches","goals","assists","actLog"].forEach(k=>db.ref(k).off());
   },[]);
 
   useEffect(()=>{try{if(user)localStorage.setItem("nfc_user",JSON.stringify(user));else localStorage.removeItem("nfc_user");}catch(e){}},[user]);
@@ -142,6 +206,7 @@ function App(){
   function submitPw(){if(pwInput===ADMIN_PW){const m=members.find(x=>x.id===pendId);setUser({id:pendId,name:m.name,isAdmin:true});setPwModal(false);setPwInput("");setPwErr(false);}else setPwErr(true);}
 
   function getPlayerGoals(memberId){return Object.values(goals).reduce((s,mg)=>s+(mg&&mg[memberId]?Number(mg[memberId]):0),0);}
+  function getPlayerAssists(memberId){return Object.values(assists).reduce((s,ma)=>s+(ma&&ma[memberId]?Number(ma[memberId]):0),0);}
 
   const iS={background:"rgba(60,0,100,0.4)",border:`1px solid ${C.border}`,borderRadius:12,padding:"10px 14px",color:"#fff",fontSize:14,outline:"none",fontFamily:"inherit",width:"100%",boxSizing:"border-box"};
   const btnP={background:`linear-gradient(135deg,${C.purple2},${C.purple})`,border:"none",borderRadius:12,padding:"12px",color:"#fff",fontWeight:700,fontSize:14,cursor:"pointer",width:"100%",boxShadow:`0 4px 20px rgba(168,85,247,0.35)`};
@@ -158,14 +223,9 @@ function App(){
 
   const glassCard={
     background:"linear-gradient(135deg,rgba(168,85,247,0.12),rgba(109,40,217,0.05))",
-    border:`1px solid rgba(168,85,247,0.2)`,
-    borderRadius:16,
-    padding:"14px 16px",
-    backdropFilter:"blur(10px)",
-    WebkitBackdropFilter:"blur(10px)"
+    border:`1px solid rgba(168,85,247,0.2)`,borderRadius:16,padding:"14px 16px",
+    backdropFilter:"blur(10px)",WebkitBackdropFilter:"blur(10px)"
   };
-
-  
 
   if(loading)return(
     <div style={{background:C.bg,minHeight:"100vh",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:16}}>
@@ -326,24 +386,44 @@ function App(){
 
         {tab==="stats"&&(
           <div>
-            <div style={{fontSize:18,fontWeight:900,marginBottom:16}}>🏆 득점 순위</div>
+            {(()=>{
+              const ranked=[...members]
+                .map(m=>({...m,g:getPlayerGoals(m.id),a:getPlayerAssists(m.id)}))
+                .map(m=>({...m,ap:m.g+m.a}))
+                .sort((a,b)=>b.ap-a.ap||b.g-a.g);
+              const top=ranked[0];
+              if(!top||top.ap===0)return null;
+              return(
+                <div style={{display:"flex",justifyContent:"center",marginBottom:28,perspective:1200}}>
+                  <MvpCard name={top.name} gol={top.g} ast={top.a}/>
+                </div>
+              );
+            })()}
+            <div style={{fontSize:18,fontWeight:900,marginBottom:16}}>🏆 공격포인트 순위</div>
             <div style={glassCard}>
+              <div style={{display:"flex",justifyContent:"flex-end",gap:16,paddingBottom:8,borderBottom:`1px solid rgba(59,7,100,0.6)`,marginBottom:4}}>
+                <span style={{fontSize:11,color:C.sub,minWidth:36,textAlign:"center"}}>⚽ 골</span>
+                <span style={{fontSize:11,color:C.sub,minWidth:36,textAlign:"center"}}>🅰️ 어시</span>
+                <span style={{fontSize:11,color:C.purple,fontWeight:700,minWidth:36,textAlign:"center"}}>합계</span>
+              </div>
               {[...members]
-                .map(m=>({...m,totalGoals:getPlayerGoals(m.id)}))
-                .sort((a,b)=>b.totalGoals-a.totalGoals)
+                .map(m=>({...m,totalGoals:getPlayerGoals(m.id),totalAssists:getPlayerAssists(m.id)}))
+                .map(m=>({...m,totalAP:m.totalGoals+m.totalAssists}))
+                .sort((a,b)=>b.totalAP-a.totalAP||b.totalGoals-a.totalGoals)
                 .map((m,idx)=>{
                   const medal=idx===0?"🥇":idx===1?"🥈":idx===2?"🥉":null;
                   const nameColor=idx===0?C.yellow:idx===1?"#C0C0C0":idx===2?"#CD7F32":C.sub;
                   return(
-                    <div key={m.id} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"13px 0",borderBottom:`1px solid rgba(59,7,100,0.6)`}}>
+                    <div key={m.id} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"11px 0",borderBottom:`1px solid rgba(59,7,100,0.4)`}}>
                       <div style={{display:"flex",alignItems:"center",gap:10}}>
                         <span style={{fontSize:14,fontWeight:900,color:nameColor,minWidth:28,textAlign:"center"}}>{medal||`${idx+1}`}</span>
                         <span style={{fontSize:15,fontWeight:700}}>{m.name}</span>
                         {m.id===myId&&<span style={{background:C.pink+"33",color:C.pink,fontSize:10,fontWeight:700,padding:"1px 6px",borderRadius:10}}>나</span>}
                       </div>
-                      <div style={{display:"flex",alignItems:"center",gap:4}}>
-                        <span style={{fontSize:22,fontWeight:900,color:m.totalGoals>0?C.purple:C.dim}}>{m.totalGoals}</span>
-                        <span style={{fontSize:12,color:C.sub}}>골</span>
+                      <div style={{display:"flex",alignItems:"center",gap:0}}>
+                        <span style={{fontSize:18,fontWeight:900,color:m.totalGoals>0?C.purple:C.dim,minWidth:36,textAlign:"center"}}>{m.totalGoals}</span>
+                        <span style={{fontSize:18,fontWeight:900,color:m.totalAssists>0?"#60a5fa":C.dim,minWidth:36,textAlign:"center"}}>{m.totalAssists}</span>
+                        <span style={{fontSize:20,fontWeight:900,color:m.totalAP>0?C.pink:C.dim,minWidth:36,textAlign:"center"}}>{m.totalAP}</span>
                       </div>
                     </div>
                   );
@@ -352,26 +432,43 @@ function App(){
 
             {isAdmin&&(
               <div style={{...glassCard,marginTop:14}}>
-                <div style={{fontSize:13,fontWeight:700,color:C.purple,marginBottom:12}}>⚽ 골 기록 입력</div>
-                <select value={goalMatch} onChange={e=>setGoalMatch(e.target.value)} style={{...iS,marginBottom:12}}>
+                <div style={{fontSize:13,fontWeight:700,color:C.purple,marginBottom:12}}>📝 공격포인트 입력</div>
+                <select value={goalMatch} onChange={e=>{setGoalMatch(e.target.value);setAssistMatch(e.target.value);}} style={{...iS,marginBottom:12}}>
                   <option value="">경기 선택...</option>
                   {[...matches].sort((a,b)=>b.date.localeCompare(a.date)).map(m=>(
                     <option key={m.id} value={m.id}>{m.date.slice(5).replace("-","/")} {m.opponent?"vs "+m.opponent:""}</option>
                   ))}
                 </select>
-                {goalMatch&&members.map(m=>{
-                  const g=goals[goalMatch]?Number(goals[goalMatch][m.id]||0):0;
-                  return(
-                    <div key={m.id} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"10px 0",borderBottom:`1px solid rgba(59,7,100,0.4)`}}>
-                      <span style={{fontSize:14,fontWeight:600}}>{m.name}</span>
-                      <div style={{display:"flex",gap:10,alignItems:"center"}}>
-                        <button onClick={()=>{if(g<=0)return;db.ref(`goals/${goalMatch}/${m.id}`).set(g-1);}} style={{background:"rgba(60,0,100,0.5)",border:`1px solid ${C.border}`,borderRadius:8,width:32,height:32,color:C.sub,fontSize:18,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>−</button>
-                        <span style={{fontSize:20,fontWeight:900,color:g>0?C.purple:C.dim,minWidth:24,textAlign:"center"}}>{g}</span>
-                        <button onClick={()=>db.ref(`goals/${goalMatch}/${m.id}`).set(g+1)} style={{background:`linear-gradient(135deg,${C.purple2},${C.purple})`,border:"none",borderRadius:8,width:32,height:32,color:"#fff",fontSize:18,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>+</button>
-                      </div>
+                {goalMatch&&(
+                  <div>
+                    <div style={{display:"flex",justifyContent:"flex-end",gap:8,marginBottom:6,paddingRight:2}}>
+                      <span style={{fontSize:11,color:C.sub,minWidth:80,textAlign:"center"}}>⚽ 골</span>
+                      <span style={{fontSize:11,color:"#60a5fa",minWidth:80,textAlign:"center"}}>🅰️ 어시스트</span>
                     </div>
-                  );
-                })}
+                    {members.map(m=>{
+                      const g=goals[goalMatch]?Number(goals[goalMatch][m.id]||0):0;
+                      const a=assists[assistMatch]?Number(assists[assistMatch][m.id]||0):0;
+                      const btnBase={border:"none",borderRadius:8,width:28,height:28,fontSize:16,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"};
+                      return(
+                        <div key={m.id} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"9px 0",borderBottom:`1px solid rgba(59,7,100,0.4)`}}>
+                          <span style={{fontSize:14,fontWeight:600}}>{m.name}</span>
+                          <div style={{display:"flex",gap:16,alignItems:"center"}}>
+                            <div style={{display:"flex",gap:6,alignItems:"center"}}>
+                              <button onClick={()=>{if(g<=0)return;db.ref(`goals/${goalMatch}/${m.id}`).set(g-1);}} style={{...btnBase,background:"rgba(60,0,100,0.5)",color:C.sub}}>−</button>
+                              <span style={{fontSize:18,fontWeight:900,color:g>0?C.purple:C.dim,minWidth:20,textAlign:"center"}}>{g}</span>
+                              <button onClick={()=>db.ref(`goals/${goalMatch}/${m.id}`).set(g+1)} style={{...btnBase,background:`linear-gradient(135deg,${C.purple2},${C.purple})`,color:"#fff"}}>+</button>
+                            </div>
+                            <div style={{display:"flex",gap:6,alignItems:"center"}}>
+                              <button onClick={()=>{if(a<=0)return;db.ref(`assists/${assistMatch}/${m.id}`).set(a-1);}} style={{...btnBase,background:"rgba(30,50,100,0.5)",color:"#60a5fa88"}}>−</button>
+                              <span style={{fontSize:18,fontWeight:900,color:a>0?"#60a5fa":C.dim,minWidth:20,textAlign:"center"}}>{a}</span>
+                              <button onClick={()=>db.ref(`assists/${assistMatch}/${m.id}`).set(a+1)} style={{...btnBase,background:"linear-gradient(135deg,#1d4ed8,#3b82f6)",color:"#fff"}}>+</button>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             )}
           </div>
