@@ -30,7 +30,7 @@
     .card-top-row{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:2px;}
     .ap-num{font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:46px;line-height:1;color:#fff;text-shadow:0 0 18px rgba(200,120,255,0.8),0 2px 8px rgba(0,0,0,0.6);}
     .ap-lbl{font-family:'Barlow Condensed',sans-serif;font-size:9px;font-weight:900;letter-spacing:2px;color:rgba(200,140,255,0.75);}
-    .logo-wrap{width:34px;height:34px;display:flex;align-items:center;justify-content:center;}
+    .logo-wrap{width:34px;height:34px;display:flex;align-items:center;justify-content:center;border-radius:50%;overflow:hidden;}
     .player-name-kr{font-family:'Black Han Sans',sans-serif;font-size:43px;letter-spacing:6px;text-align:center;color:#fff;text-shadow:0 0 32px rgba(200,120,255,0.78),0 0 12px rgba(180,80,255,0.5),0 2px 8px rgba(0,0,0,0.8);margin:5px 0 16px;line-height:1.1;}
     .glow-line{height:1px;background:linear-gradient(90deg,transparent,rgba(180,100,255,0.6),rgba(232,121,249,0.8),rgba(180,100,255,0.6),transparent);margin:0 8px 14px;box-shadow:0 0 8px rgba(200,100,255,0.5);}
     .stats-row{display:flex;justify-content:center;gap:24px;}
@@ -109,6 +109,7 @@ function StatusBadge({status}){
 
 function MvpCard({name,gol,ast}){
   const cardRef=useRef(null);
+  const flashRef=useRef(null);
   const ap=gol+ast;
   function handleMove(e){
     const card=cardRef.current;if(!card)return;
@@ -122,8 +123,21 @@ function MvpCard({name,gol,ast}){
     const card=cardRef.current;if(!card)return;
     card.style.transform="perspective(900px) rotateX(7deg) rotateY(-5deg)";
   }
+  function handleClick(){
+    const card=cardRef.current;if(!card)return;
+    const flash=flashRef.current;
+    card.style.transform="perspective(900px) rotateX(0deg) rotateY(0deg) scale(1.12)";
+    card.style.boxShadow="0 0 0 2px rgba(232,121,249,0.9),0 0 40px rgba(232,121,249,0.7),0 0 80px rgba(192,132,252,0.5),0 20px 60px rgba(100,0,200,0.4)";
+    if(flash){flash.style.opacity="1";}
+    setTimeout(()=>{
+      card.style.transform="perspective(900px) rotateX(7deg) rotateY(-5deg)";
+      card.style.boxShadow="";
+      if(flash){flash.style.opacity="0";}
+    },350);
+  }
   return(
-    <div className="mvp-card" ref={cardRef} onMouseMove={handleMove} onMouseLeave={handleLeave} onTouchMove={handleMove} onTouchEnd={handleLeave}>
+    <div className="mvp-card" ref={cardRef} onMouseMove={handleMove} onMouseLeave={handleLeave} onTouchMove={handleMove} onTouchEnd={handleLeave} onClick={handleClick}>
+      <div ref={flashRef} style={{position:"absolute",inset:0,background:"linear-gradient(135deg,rgba(255,255,255,0.18),rgba(232,121,249,0.12))",opacity:0,transition:"opacity 0.35s ease",pointerEvents:"none",zIndex:10,borderRadius:"inherit"}}/>
       <div className="hex-layer"/>
       <div className="shimmer-layer"/>
       <div className="stadium-glow"/>
@@ -135,7 +149,7 @@ function MvpCard({name,gol,ast}){
             <div className="ap-lbl">ATTACK PT</div>
           </div>
           <div className="logo-wrap">
-            <img src={LOGO_SRC} style={{width:34,height:34,objectFit:"contain",filter:"drop-shadow(0 0 6px rgba(157,0,224,0.5))"}}/>
+            <img src={LOGO_SRC} style={{width:34,height:34,objectFit:"cover",mixBlendMode:"screen"}}/>
           </div>
         </div>
         <div className="player-name-kr">{name}</div>
