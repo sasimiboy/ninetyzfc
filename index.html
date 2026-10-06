@@ -147,7 +147,8 @@ function App(){
   const btnP={background:`linear-gradient(135deg,${C.purple2},${C.purple})`,border:"none",borderRadius:12,padding:"12px",color:"#fff",fontWeight:700,fontSize:14,cursor:"pointer",width:"100%",boxShadow:`0 4px 20px rgba(168,85,247,0.35)`};
   const btnG={background:"rgba(60,0,100,0.3)",border:`1px solid ${C.border}`,borderRadius:12,padding:"10px",color:C.sub,fontWeight:600,fontSize:13,cursor:"pointer",flex:1};
 
-  const thisMonth=MONTHS[0];
+  const _now=new Date();
+  const thisMonth=`${_now.getFullYear()}-${String(_now.getMonth()+1).padStart(2,"0")}`;
   const thisDues=dues[thisMonth]||{};
   const paidCount=Object.values(thisDues).filter(d=>d?.paid).length;
   const totalPaid=Object.values(thisDues).reduce((s,d)=>s+(d?.paid?d.amount:0),0);
