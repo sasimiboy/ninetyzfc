@@ -68,13 +68,13 @@
     .tier-bronze .rank-tag{color:#e0a46a;text-shadow:none;}
 
     .mvp-card.tier-basic{transform:none;cursor:default;background:linear-gradient(195deg,#221c2e 0%,#16121f 55%,#0d0a13 100%);box-shadow:0 0 0 1px rgba(255,255,255,0.08),0 4px 12px rgba(0,0,0,0.5);}
-    .tier-basic .ap-num{color:#d6d1df;text-shadow:none;}
-    .tier-basic .ap-lbl,.tier-basic .stat-l{color:rgba(190,180,210,0.5);}
-    .tier-basic .player-name-kr{color:#e4e0ea;text-shadow:none;}
-    .tier-basic .glow-line{background:rgba(255,255,255,0.1);box-shadow:none;}
-    .tier-basic .stat-n.gol,.tier-basic .stat-n.ast{color:#b9b3c6;text-shadow:none;}
-    .tier-basic .rank-tag{color:rgba(190,180,210,0.6);text-shadow:none;}
-    .tier-basic .logo-wrap img{filter:grayscale(1);opacity:0.5;}
+    .tier-basic .ap-num{color:#fff;text-shadow:none;}
+    .tier-basic .ap-lbl,.tier-basic .stat-l{color:rgba(255,255,255,0.7);}
+    .tier-basic .player-name-kr{color:#fff;text-shadow:none;}
+    .tier-basic .glow-line{background:rgba(255,255,255,0.25);box-shadow:none;}
+    .tier-basic .stat-n.gol,.tier-basic .stat-n.ast{color:#fff;text-shadow:none;}
+    .tier-basic .rank-tag{color:rgba(255,255,255,0.8);text-shadow:none;}
+    .tier-basic .logo-wrap img{opacity:0.8;}
   </style>
 </head>
 <body>
@@ -99,6 +99,7 @@ const {useState,useEffect,useRef} = React;
 const db = window._db;
 
 const ADMIN_ID=1,ADMIN_PW="1886";
+const COLW=48; // 공격포인트 순위표 숫자 칸 너비 (헤더/행 공통)
 const C={
   bg:"#07000f",card:"#100020",card2:"#180030",
   purple:"#c084fc",purple2:"#7c3aed",pink:"#e879f9",
@@ -236,6 +237,8 @@ function App(){
   const [assistMatch,setAssistMatch]=useState("");
   const [mom,setMom]=useState({});
   const [momOpen,setMomOpen]=useState(null);
+  const [attendance,setAttendance]=useState({});
+  const [attOpen,setAttOpen]=useState(null);
   const [viewId,setViewId]=useState(null);
   const [,setTick]=useState(0);
 
@@ -243,7 +246,7 @@ function App(){
   const myId=user?.id;
 
   useEffect(()=>{
-    let done={members:false,matches:false,goals:false,assists:false,actLog:false,mom:false};
+    let done={members:false,matches:false,goals:false,assists:false,actLog:false,mom:false,attendance:false};
     function chk(){if(Object.values(done).every(Boolean))setLoading(false);}
     db.ref("members").on("value",s=>{const v=s.val();if(v)setMembers(toKeyed(v));else db.ref("members").set(INIT_MEMBERS);done.members=true;chk();});
     db.ref("matches").on("value",s=>{setMatches(toKeyed(s.val()));done.matches=true;chk();});
@@ -251,8 +254,9 @@ function App(){
     db.ref("assists").on("value",s=>{setAssists(s.val()||{});done.assists=true;chk();});
     db.ref("actLog").on("value",s=>{const a=toArr(s.val()).sort((x,y)=>(y.ts||y.id||0)-(x.ts||x.id||0));setActivity(a);done.actLog=true;chk();});
     db.ref("mom").on("value",s=>{setMom(s.val()||{});done.mom=true;chk();});
+    db.ref("attendance").on("value",s=>{setAttendance(s.val()||{});done.attendance=true;chk();});
     const t=setInterval(()=>setTick(x=>x+1),60000);
-    return()=>{clearInterval(t);["members","matches","goals","assists","actLog","mom"].forEach(k=>db.ref(k).off());};
+    return()=>{clearInterval(t);["members","matches","goals","assists","actLog","mom","attendance"].forEach(k=>db.ref(k).off());};
   },[]);
 
   useEffect(()=>{try{if(user)localStorage.setItem("nfc_user",JSON.stringify(user));else localStorage.removeItem("nfc_user");}catch(e){}},[user]);
@@ -268,7 +272,17 @@ function App(){
   function sumFor(src,memberId){return Object.entries(src).reduce((s,[mid,mg])=>s+(matchIds.has(mid)&&mg&&mg[memberId]?Number(mg[memberId])||0:0),0);}
   function getPlayerGoals(memberId){return sumFor(goals,memberId);}
   function getPlayerAssists(memberId){return sumFor(assists,memberId);}
-  function momTally(matchId){const cnt={};Object.values(mom[matchId]||{}).forEach(c=>{const k=String(c);if(memberById[k])cnt[k]=(cnt[k]||0)+1;});return cnt;}
+  // 참석자: attendance/{경기id}/{멤버id}=true
+  function isAttending(matchId,memberId){const a=attendance[matchId];return !!(a&&a[memberId]);}
+  function attendIds(matchId){const a=attendance[matchId]||{};return members.filter(m=>a[m.id]).map(m=>String(m.id));}
+  // 유효표: 투표자·후보 모두 현재 멤버이고 참석자일 것 (참석자 미등록 경기는 예전 표 그대로 인정)
+  function validVotes(matchId){
+    const hasAtt=attendIds(matchId).length>0;
+    return Object.entries(mom[matchId]||{}).filter(([v,c])=>c!=null&&memberById[v]&&memberById[String(c)]&&(!hasAtt||(isAttending(matchId,v)&&isAttending(matchId,c))));
+  }
+  function momTally(matchId){const cnt={};validVotes(matchId).forEach(([,c])=>{const k=String(c);cnt[k]=(cnt[k]||0)+1;});return cnt;}
+  function setAttend(match,memberId,on){db.ref(`attendance/${match.id}/${memberId}`).set(on?true:null);}
+  function setAttendAll(match,on){const u={};members.forEach(m=>{u[m.id]=on?true:null;});db.ref(`attendance/${match.id}`).update(u);}
   function momWinners(matchId){const cnt=momTally(matchId);const max=Math.max(0,...Object.values(cnt));return max?Object.keys(cnt).filter(k=>cnt[k]===max):[];}
   function getPlayerMom(memberId){return matches.filter(m=>m.result&&m.momClosed&&momWinners(m.id).includes(String(memberId))).length;}
   const ranked=members
@@ -279,8 +293,8 @@ function App(){
   ranked.forEach(m=>{m.rank=m.ap>0?1+ranked.filter(o=>o.ap>m.ap||(o.ap===m.ap&&o.g>m.g)).length:null;});
   function openProfile(id){setViewId(id);setTab("player");window.scrollTo(0,0);}
   function deleteMatch(match){
-    if(!confirm("삭제할까요?\n이 경기의 골·어시·MOM 기록도 함께 삭제됩니다."))return;
-    db.ref().update({[`matches/${match._k}`]:null,[`goals/${match.id}`]:null,[`assists/${match.id}`]:null,[`mom/${match.id}`]:null});
+    if(!confirm("삭제할까요?\n이 경기의 골·어시·MOM·참석 기록도 함께 삭제됩니다."))return;
+    db.ref().update({[`matches/${match._k}`]:null,[`goals/${match.id}`]:null,[`assists/${match.id}`]:null,[`mom/${match.id}`]:null,[`attendance/${match.id}`]:null});
     if(String(goalMatch)===String(match.id)){setGoalMatch("");setAssistMatch("");}
     addLog(`경기 삭제: ${match.date.slice(5).replace("-","/")} ${match.opponent?"vs "+match.opponent:""}`);
   }
@@ -438,12 +452,52 @@ function App(){
                       </div>
                     </div>
                   )}
+                  {(()=>{
+                    const att=attendIds(match.id);
+                    const meIn=att.includes(String(myId));
+                    const locked=!!match.momClosed;
+                    const open=attOpen===match.id;
+                    const chip=(on)=>({background:on?`linear-gradient(135deg,${C.purple2},${C.purple})`:"rgba(60,0,100,0.35)",border:`1px solid ${on?C.purple:C.border}`,borderRadius:10,padding:"9px 4px",color:on?"#fff":C.sub,fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"inherit"});
+                    return(
+                      <div style={{background:"rgba(124,58,237,0.08)",border:"1px solid rgba(168,85,247,0.25)",borderRadius:12,padding:"10px 12px",marginBottom:8}}>
+                        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:8}}>
+                          <div style={{fontSize:12,fontWeight:900,color:C.purple}}>👥 참석 {att.length}명</div>
+                          <div style={{display:"flex",gap:6,flexShrink:0}}>
+                            {!locked&&<button onClick={()=>setAttend(match,myId,!meIn)} style={{background:meIn?"rgba(60,0,100,0.4)":`linear-gradient(135deg,${C.purple2},${C.purple})`,border:meIn?`1px solid ${C.border}`:"none",borderRadius:20,padding:"6px 12px",color:meIn?C.sub:"#fff",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>{meIn?"참석 취소":"참석하기"}</button>}
+                            {isAdmin&&<button onClick={()=>setAttOpen(open?null:match.id)} style={{background:"rgba(60,0,100,0.4)",border:`1px solid ${C.border}`,borderRadius:20,padding:"6px 10px",color:C.sub,fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>{open?"닫기":"설정"}</button>}
+                          </div>
+                        </div>
+                        {att.length>0&&!open&&(
+                          <div style={{display:"flex",flexWrap:"wrap",gap:5,marginTop:8}}>
+                            {att.map(k=><span key={k} style={{fontSize:11,color:k===String(myId)?C.pink:"#fff",background:"rgba(60,0,100,0.45)",borderRadius:10,padding:"2px 8px"}}>{memberById[k].name}</span>)}
+                          </div>
+                        )}
+                        {isAdmin&&open&&(
+                          <div style={{marginTop:10}}>
+                            <div style={{display:"flex",gap:6,marginBottom:8}}>
+                              <button onClick={()=>setAttendAll(match,true)} style={{...btnG,padding:"6px",fontSize:12}}>전체 선택</button>
+                              <button onClick={()=>setAttendAll(match,false)} style={{...btnG,padding:"6px",fontSize:12}}>전체 해제</button>
+                            </div>
+                            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:6}}>
+                              {members.map(c=>{const on=att.includes(String(c.id));return(
+                                <button key={c.id} onClick={()=>setAttend(match,c.id,!on)} style={chip(on)}>{c.name}</button>
+                              );})}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })()}
                   {match.result&&(()=>{
                     const votes=mom[match.id]||{};
-                    const voters=Object.entries(votes).filter(([k,v])=>v!=null&&memberById[k]).length;
+                    const att=attendIds(match.id);
+                    const meIn=att.includes(String(myId));
+                    const voters=validVotes(match.id).length;
                     const myVote=votes[myId]!=null?String(votes[myId]):null;
                     const winners=momWinners(match.id);const tally=momTally(match.id);
-                    const open=momOpen===match.id;
+                    const canVote=!match.momClosed&&meIn;
+                    const open=momOpen===match.id&&canVote;
+                    const hint=match.momClosed?null:att.length===0?"참석자가 등록되면 투표할 수 있어요":!meIn?"참석자만 투표할 수 있어요":null;
                     return(
                       <div style={{background:"rgba(251,191,36,0.06)",border:"1px solid rgba(251,191,36,0.25)",borderRadius:12,padding:"10px 12px",marginTop:4}}>
                         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:8}}>
@@ -453,11 +507,11 @@ function App(){
                               winners.length?<div style={{fontSize:15,fontWeight:900,marginTop:3}}>{winners.map(k=>memberById[k].name).join(", ")} <span style={{fontSize:11,color:C.sub,fontWeight:400}}>{tally[winners[0]]}표 · {voters}명 참여</span></div>
                               :<div style={{fontSize:12,color:C.sub,marginTop:3}}>투표 없음</div>
                             ):(
-                              <div style={{fontSize:11,color:C.sub,marginTop:3}}>{voters}명 참여{myVote&&memberById[myVote]?` · 내 투표: ${memberById[myVote].name}`:""}</div>
+                              <div style={{fontSize:11,color:C.sub,marginTop:3}}>{voters}명 참여{meIn&&myVote&&memberById[myVote]&&att.includes(myVote)?` · 내 투표: ${memberById[myVote].name}`:""}{hint&&<span style={{color:C.dim}}> · {hint}</span>}</div>
                             )}
                           </div>
                           <div style={{display:"flex",gap:6,flexShrink:0}}>
-                            {!match.momClosed&&<button onClick={()=>setMomOpen(open?null:match.id)} style={{background:open?"rgba(60,0,100,0.4)":"linear-gradient(135deg,#b45309,#fbbf24)",border:"none",borderRadius:20,padding:"6px 12px",color:"#fff",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>{open?"닫기":myVote?"변경":"투표"}</button>}
+                            {canVote&&<button onClick={()=>setMomOpen(open?null:match.id)} style={{background:open?"rgba(60,0,100,0.4)":"linear-gradient(135deg,#b45309,#fbbf24)",border:"none",borderRadius:20,padding:"6px 12px",color:"#fff",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>{open?"닫기":(myVote&&att.includes(myVote))?"변경":"투표"}</button>}
                             {isAdmin&&<button onClick={()=>{toggleMomClose(match);setMomOpen(null);}} style={{background:"rgba(60,0,100,0.4)",border:`1px solid ${C.border}`,borderRadius:20,padding:"6px 10px",color:C.sub,fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>{match.momClosed?"재개":"마감"}</button>}
                           </div>
                         </div>
@@ -468,9 +522,9 @@ function App(){
                         )}
                         {open&&!match.momClosed&&(
                           <div style={{marginTop:10}}>
-                            <div style={{fontSize:11,color:C.sub,marginBottom:8}}>오늘의 MOM을 골라주세요 · 본인 제외 · 다시 누르면 취소 · 결과는 마감 후 공개</div>
+                            <div style={{fontSize:11,color:C.sub,marginBottom:8}}>오늘의 MOM을 골라주세요 · 참석자 중 본인 제외 · 다시 누르면 취소 · 결과는 마감 후 공개</div>
                             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:6}}>
-                              {members.filter(c=>c.id!==myId).map(c=>{const sel=myVote===String(c.id);return(
+                              {members.filter(c=>c.id!==myId&&att.includes(String(c.id))).map(c=>{const sel=myVote===String(c.id);return(
                                 <button key={c.id} onClick={()=>voteMom(match,c.id)} style={{background:sel?"linear-gradient(135deg,#b45309,#fbbf24)":"rgba(60,0,100,0.35)",border:`1px solid ${sel?"#fbbf24":C.border}`,borderRadius:10,padding:"9px 4px",color:sel?"#fff":C.sub,fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>{c.name}</button>
                               );})}
                             </div>
@@ -505,10 +559,10 @@ function App(){
             <div style={{fontSize:18,fontWeight:900,marginBottom:4}}>🏆 공격포인트 순위</div>
             <div style={{fontSize:11,color:C.dim,marginBottom:12}}>이름을 누르면 개인 기록을 볼 수 있어요</div>
             <div style={glassCard}>
-              <div style={{display:"flex",justifyContent:"flex-end",gap:16,paddingBottom:8,borderBottom:`1px solid rgba(59,7,100,0.6)`,marginBottom:4}}>
-                <span style={{fontSize:11,color:C.sub,minWidth:36,textAlign:"center"}}>⚽ 골</span>
-                <span style={{fontSize:11,color:C.sub,minWidth:36,textAlign:"center"}}>🅰️ 어시</span>
-                <span style={{fontSize:11,color:C.purple,fontWeight:700,minWidth:36,textAlign:"center"}}>합계</span>
+              <div style={{display:"flex",justifyContent:"flex-end",paddingBottom:8,borderBottom:`1px solid rgba(59,7,100,0.6)`,marginBottom:4}}>
+                <span style={{fontSize:11,color:C.sub,width:COLW,flexShrink:0,textAlign:"center",whiteSpace:"nowrap"}}>⚽ 골</span>
+                <span style={{fontSize:11,color:C.sub,width:COLW,flexShrink:0,textAlign:"center",whiteSpace:"nowrap"}}>🅰️ 어시</span>
+                <span style={{fontSize:11,color:C.purple,fontWeight:700,width:COLW,flexShrink:0,textAlign:"center",whiteSpace:"nowrap"}}>합계</span>
               </div>
               {ranked
                 .map(m=>({...m,totalGoals:m.g,totalAssists:m.a,totalAP:m.ap}))
@@ -523,10 +577,10 @@ function App(){
                         {m.id===myId&&<span style={{background:C.pink+"33",color:C.pink,fontSize:10,fontWeight:700,padding:"1px 6px",borderRadius:10}}>나</span>}
                         {m.mom>0&&<span style={{background:C.yellow+"22",color:C.yellow,fontSize:10,fontWeight:700,padding:"1px 6px",borderRadius:10}}>🏅{m.mom}</span>}
                       </div>
-                      <div style={{display:"flex",alignItems:"center",gap:0}}>
-                        <span style={{fontSize:18,fontWeight:900,color:m.totalGoals>0?C.purple:C.dim,minWidth:36,textAlign:"center"}}>{m.totalGoals}</span>
-                        <span style={{fontSize:18,fontWeight:900,color:m.totalAssists>0?"#60a5fa":C.dim,minWidth:36,textAlign:"center"}}>{m.totalAssists}</span>
-                        <span style={{fontSize:20,fontWeight:900,color:m.totalAP>0?C.pink:C.dim,minWidth:36,textAlign:"center"}}>{m.totalAP}</span>
+                      <div style={{display:"flex",alignItems:"center",flexShrink:0}}>
+                        <span style={{fontSize:18,fontWeight:900,color:m.totalGoals>0?C.purple:C.dim,width:COLW,textAlign:"center"}}>{m.totalGoals}</span>
+                        <span style={{fontSize:18,fontWeight:900,color:m.totalAssists>0?"#60a5fa":C.dim,width:COLW,textAlign:"center"}}>{m.totalAssists}</span>
+                        <span style={{fontSize:20,fontWeight:900,color:m.totalAP>0?C.pink:C.dim,width:COLW,textAlign:"center"}}>{m.totalAP}</span>
                       </div>
                     </div>
                   );
@@ -595,7 +649,7 @@ function App(){
                 {p.id===myId&&<span style={{background:C.pink+"33",color:C.pink,fontSize:10,fontWeight:700,padding:"1px 6px",borderRadius:10}}>나</span>}
                 <StatusBadge status={p.status||"정상"}/>
               </div>
-              {p.customStatus&&<div style={{fontSize:12,color:C.sub,marginTop:-10,marginBottom:14}}>{p.customStatus}</div>}
+              <div style={{fontSize:12,color:C.sub,marginTop:-10,marginBottom:14}}>참석 {matches.filter(mt=>isAttending(mt.id,p.id)).length}경기{p.customStatus?` · ${p.customStatus}`:""}</div>
               <div style={{display:"flex",justifyContent:"center",marginBottom:24,perspective:1200}}>
                 <MvpCard name={p.name} gol={p.g} ast={p.a} rank={p.rank}/>
               </div>
