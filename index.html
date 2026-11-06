@@ -47,6 +47,34 @@
     .stat-n.gol{color:#e4b4ff;text-shadow:0 0 14px rgba(200,100,255,0.7);}
     .stat-n.ast{color:#7dd3fc;text-shadow:0 0 14px rgba(96,165,250,0.7);}
     .stat-l{font-family:'Barlow Condensed',sans-serif;font-size:9px;font-weight:900;letter-spacing:2px;color:rgba(200,160,255,0.65);}
+    .rank-tag{font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:900;letter-spacing:2px;margin-top:4px;color:#fbbf24;text-shadow:0 0 8px rgba(251,191,36,0.6);}
+
+    /* 등급별 카드: 1위(기본 .mvp-card) > 2위 실버 > 3위 브론즈 > 그 외 기본 */
+    .mvp-card.tier-silver{background:linear-gradient(128deg,rgba(255,255,255,0.12) 0%,rgba(255,255,255,0.03) 28%,transparent 50%),linear-gradient(195deg,#4b515e 0%,#6b7280 22%,#353a45 55%,#14161b 100%);box-shadow:0 0 0 1.5px rgba(214,219,228,0.55),0 4px 18px rgba(0,0,0,0.6),inset 0 1px 0 rgba(255,255,255,0.2);}
+    .tier-silver .ap-num{text-shadow:0 0 12px rgba(226,232,240,0.5),0 2px 6px rgba(0,0,0,0.6);}
+    .tier-silver .ap-lbl,.tier-silver .stat-l{color:rgba(226,232,240,0.7);}
+    .tier-silver .player-name-kr{text-shadow:0 0 14px rgba(226,232,240,0.35),0 2px 6px rgba(0,0,0,0.8);}
+    .tier-silver .glow-line{background:linear-gradient(90deg,transparent,rgba(226,232,240,0.7),transparent);box-shadow:none;}
+    .tier-silver .stat-n.gol,.tier-silver .stat-n.ast{color:#e5e7eb;text-shadow:none;}
+    .tier-silver .rank-tag{color:#e5e7eb;text-shadow:none;}
+    .tier-silver .shimmer-layer{animation-duration:6s;opacity:0.5;}
+
+    .mvp-card.tier-bronze{background:linear-gradient(128deg,rgba(255,255,255,0.08) 0%,transparent 40%),linear-gradient(195deg,#5c3519 0%,#8a5428 24%,#43250f 56%,#160b04 100%);box-shadow:0 0 0 1.5px rgba(205,127,50,0.55),0 4px 16px rgba(0,0,0,0.6),inset 0 1px 0 rgba(255,255,255,0.12);}
+    .tier-bronze .ap-num{text-shadow:0 2px 6px rgba(0,0,0,0.6);}
+    .tier-bronze .ap-lbl,.tier-bronze .stat-l{color:rgba(240,190,140,0.7);}
+    .tier-bronze .player-name-kr{text-shadow:0 2px 6px rgba(0,0,0,0.8);}
+    .tier-bronze .glow-line{background:linear-gradient(90deg,transparent,rgba(205,127,50,0.7),transparent);box-shadow:none;}
+    .tier-bronze .stat-n.gol,.tier-bronze .stat-n.ast{color:#f3c79c;text-shadow:none;}
+    .tier-bronze .rank-tag{color:#e0a46a;text-shadow:none;}
+
+    .mvp-card.tier-basic{transform:none;cursor:default;background:linear-gradient(195deg,#221c2e 0%,#16121f 55%,#0d0a13 100%);box-shadow:0 0 0 1px rgba(255,255,255,0.08),0 4px 12px rgba(0,0,0,0.5);}
+    .tier-basic .ap-num{color:#d6d1df;text-shadow:none;}
+    .tier-basic .ap-lbl,.tier-basic .stat-l{color:rgba(190,180,210,0.5);}
+    .tier-basic .player-name-kr{color:#e4e0ea;text-shadow:none;}
+    .tier-basic .glow-line{background:rgba(255,255,255,0.1);box-shadow:none;}
+    .tier-basic .stat-n.gol,.tier-basic .stat-n.ast{color:#b9b3c6;text-shadow:none;}
+    .tier-basic .rank-tag{color:rgba(190,180,210,0.6);text-shadow:none;}
+    .tier-basic .logo-wrap img{filter:grayscale(1);opacity:0.5;}
   </style>
 </head>
 <body>
@@ -70,7 +98,7 @@
 const {useState,useEffect,useRef} = React;
 const db = window._db;
 
-const ADMIN_ID=1,ADMIN_PW="1886",DUE_AMT=20000;
+const ADMIN_ID=1,ADMIN_PW="1886";
 const C={
   bg:"#07000f",card:"#100020",card2:"#180030",
   purple:"#c084fc",purple2:"#7c3aed",pink:"#e879f9",
@@ -78,14 +106,6 @@ const C={
 };
 const LOGO_SRC="./나인티즈_로고.png";
 
-function getMonths(n=12){
-  const res=[],now=new Date(),base=new Date(now.getFullYear(),now.getMonth(),1);
-  for(let i=0;i<n;i++){const d=new Date(base.getFullYear(),base.getMonth()-i,1);res.push(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}`);}
-  return res;
-}
-const MONTHS=getMonths(12);
-const DOT_MONTHS=MONTHS.slice(0,5);
-function mLabel(m){const[y,mo]=m.split("-");return `${y}년 ${+mo}월`;}
 
 const INIT_MEMBERS=[
   {id:1,name:"김민형",status:"정상",customStatus:""},
@@ -107,9 +127,6 @@ const INIT_MEMBERS=[
   {id:17,name:"조성훈",status:"정상",customStatus:""},
   {id:18,name:"한호성",status:"정상",customStatus:""},
 ];
-function initDues(members){
-  const d={};MONTHS.forEach(m=>{d[m]={};members.forEach(mb=>{d[m][mb.id]={paid:false,amount:0};});});return d;
-}
 function toArr(v){if(!v)return[];if(Array.isArray(v))return v.filter(Boolean);return Object.values(v).filter(Boolean);}
 // Firebase 키(_k)를 보존한 배열로 변환 → 항목 단위 수정/삭제에 사용
 function toKeyed(v){const out=[];if(!v)return out;if(Array.isArray(v))v.forEach((x,i)=>{if(x)out.push({...x,_k:String(i)});});else Object.entries(v).forEach(([k,x])=>{if(x)out.push({...x,_k:k});});return out;}
@@ -122,11 +139,18 @@ function StatusBadge({status}){
   return <span style={{padding:"2px 8px",borderRadius:20,fontSize:11,fontWeight:700,background:col+"22",color:col,border:`1px solid ${col}44`}}>{status}</span>;
 }
 
-function MvpCard({name,gol,ast}){
+// rank: 공동순위 반영 순위 (공격포인트 0이면 null)
+function cardTier(rank){return rank===1?"gold":rank===2?"silver":rank===3?"bronze":"basic";}
+const REST={gold:"perspective(900px) rotateX(7deg) rotateY(-5deg)",silver:"perspective(900px) rotateX(5deg) rotateY(-3deg)",bronze:"perspective(900px) rotateX(4deg) rotateY(-2deg)",basic:"none"};
+function MvpCard({name,gol,ast,rank}){
   const cardRef=useRef(null);
   const flashRef=useRef(null);
   const ap=gol+ast;
+  const tier=cardTier(rank);
+  const interactive=tier!=="basic";
+  const tag=rank===1?"MVP":rank===2?"2ND":rank===3?"3RD":rank?`#${rank}`:"-";
   function handleMove(e){
+    if(!interactive)return;
     const card=cardRef.current;if(!card)return;
     const r=card.getBoundingClientRect();
     const src=e.touches?e.touches[0]:e;
@@ -135,10 +159,12 @@ function MvpCard({name,gol,ast}){
     card.style.transform=`perspective(900px) rotateX(${-dy*12}deg) rotateY(${dx*12}deg) scale(1.04)`;
   }
   function handleLeave(){
+    if(!interactive)return;
     const card=cardRef.current;if(!card)return;
-    card.style.transform="perspective(900px) rotateX(7deg) rotateY(-5deg)";
+    card.style.transform=REST[tier];
   }
   function handleClick(){
+    if(tier!=="gold")return;
     const card=cardRef.current;if(!card)return;
     const flash=flashRef.current;
     card.style.transform="perspective(900px) rotateX(0deg) rotateY(0deg) scale(1.12)";
@@ -151,17 +177,18 @@ function MvpCard({name,gol,ast}){
     },350);
   }
   return(
-    <div className="mvp-card" ref={cardRef} onMouseMove={handleMove} onMouseLeave={handleLeave} onTouchMove={handleMove} onTouchEnd={handleLeave} onClick={handleClick}>
+    <div className={`mvp-card${tier==="gold"?"":" tier-"+tier}`} style={{transform:REST[tier]}} ref={cardRef} onMouseMove={handleMove} onMouseLeave={handleLeave} onTouchMove={handleMove} onTouchEnd={handleLeave} onClick={handleClick}>
       <div ref={flashRef} style={{position:"absolute",inset:0,background:"linear-gradient(135deg,rgba(255,255,255,0.18),rgba(232,121,249,0.12))",opacity:0,transition:"opacity 0.35s ease",pointerEvents:"none",zIndex:10,borderRadius:"inherit"}}/>
-      <div className="hex-layer"/>
-      <div className="shimmer-layer"/>
-      <div className="stadium-glow"/>
-      <div className="bevel-top"/>
+      {tier!=="basic"&&<div className="hex-layer"/>}
+      {(tier==="gold"||tier==="silver")&&<div className="shimmer-layer"/>}
+      {tier==="gold"&&<div className="stadium-glow"/>}
+      {tier!=="basic"&&<div className="bevel-top"/>}
       <div className="card-inner">
         <div className="card-top-row">
           <div>
             <div className="ap-num">{ap}</div>
             <div className="ap-lbl">ATTACK PT</div>
+            <div className="rank-tag">{tag}</div>
           </div>
           <div className="logo-wrap">
             <img src={LOGO_SRC} style={{width:34,height:34,objectFit:"cover",mixBlendMode:"screen"}}/>
@@ -187,7 +214,6 @@ function MvpCard({name,gol,ast}){
 function App(){
   const [loading,setLoading]=useState(true);
   const [members,setMembers]=useState([]);
-  const [dues,setDues]=useState({});
   const [matches,setMatches]=useState([]);
   const [goals,setGoals]=useState({});
   const [activity,setActivity]=useState([]);
@@ -197,10 +223,7 @@ function App(){
   const [pwErr,setPwErr]=useState(false);
   const [pendId,setPendId]=useState(null);
   const [tab,setTab]=useState("home");
-  const [manTab,setManTab]=useState("dues");
-  const [dueMonth,setDueMonth]=useState(MONTHS[0]);
-  const [editDue,setEditDue]=useState(null);
-  const [editAmt,setEditAmt]=useState("");
+  const [editMember,setEditMember]=useState(null);
   const [editCustom,setEditCustom]=useState("");
   const [resultEdit,setResultEdit]=useState(null);
   const [resultIn,setResultIn]=useState({our:"",opp:""});
@@ -220,17 +243,16 @@ function App(){
   const myId=user?.id;
 
   useEffect(()=>{
-    let done={members:false,dues:false,matches:false,goals:false,assists:false,actLog:false,mom:false};
+    let done={members:false,matches:false,goals:false,assists:false,actLog:false,mom:false};
     function chk(){if(Object.values(done).every(Boolean))setLoading(false);}
     db.ref("members").on("value",s=>{const v=s.val();if(v)setMembers(toKeyed(v));else db.ref("members").set(INIT_MEMBERS);done.members=true;chk();});
-    db.ref("dues").on("value",s=>{const v=s.val();if(v)setDues(v);else db.ref("dues").set(initDues(INIT_MEMBERS));done.dues=true;chk();});
     db.ref("matches").on("value",s=>{setMatches(toKeyed(s.val()));done.matches=true;chk();});
     db.ref("goals").on("value",s=>{setGoals(s.val()||{});done.goals=true;chk();});
     db.ref("assists").on("value",s=>{setAssists(s.val()||{});done.assists=true;chk();});
     db.ref("actLog").on("value",s=>{const a=toArr(s.val()).sort((x,y)=>(y.ts||y.id||0)-(x.ts||x.id||0));setActivity(a);done.actLog=true;chk();});
     db.ref("mom").on("value",s=>{setMom(s.val()||{});done.mom=true;chk();});
     const t=setInterval(()=>setTick(x=>x+1),60000);
-    return()=>{clearInterval(t);["members","dues","matches","goals","assists","actLog","mom"].forEach(k=>db.ref(k).off());};
+    return()=>{clearInterval(t);["members","matches","goals","assists","actLog","mom"].forEach(k=>db.ref(k).off());};
   },[]);
 
   useEffect(()=>{try{if(user)localStorage.setItem("nfc_user",JSON.stringify(user));else localStorage.removeItem("nfc_user");}catch(e){}},[user]);
@@ -253,6 +275,8 @@ function App(){
     .map(m=>({...m,g:getPlayerGoals(m.id),a:getPlayerAssists(m.id),mom:getPlayerMom(m.id)}))
     .map(m=>({...m,ap:m.g+m.a}))
     .sort((a,b)=>b.ap-a.ap||b.g-a.g);
+  // 공동순위: 공격포인트·골이 모두 같으면 같은 순위, 공격포인트 0이면 순위 없음
+  ranked.forEach(m=>{m.rank=m.ap>0?1+ranked.filter(o=>o.ap>m.ap||(o.ap===m.ap&&o.g>m.g)).length:null;});
   function openProfile(id){setViewId(id);setTab("player");window.scrollTo(0,0);}
   function deleteMatch(match){
     if(!confirm("삭제할까요?\n이 경기의 골·어시·MOM 기록도 함께 삭제됩니다."))return;
@@ -260,7 +284,6 @@ function App(){
     if(String(goalMatch)===String(match.id)){setGoalMatch("");setAssistMatch("");}
     addLog(`경기 삭제: ${match.date.slice(5).replace("-","/")} ${match.opponent?"vs "+match.opponent:""}`);
   }
-  function setDue(m,paid){db.ref(`dues/${dueMonth}/${m.id}`).set({paid,amount:paid?DUE_AMT:0});addLog(`${m.name} ${mLabel(dueMonth)} ${paid?"납부":"미납"} 처리`);setEditDue(null);}
   function voteMom(match,candId){const ref=db.ref(`mom/${match.id}/${myId}`);const cur=(mom[match.id]||{})[myId];if(String(cur)===String(candId))ref.remove();else ref.set(candId);}
   function toggleMomClose(match){
     const closing=!match.momClosed;
@@ -272,11 +295,6 @@ function App(){
   const btnP={background:`linear-gradient(135deg,${C.purple2},${C.purple})`,border:"none",borderRadius:12,padding:"12px",color:"#fff",fontWeight:700,fontSize:14,cursor:"pointer",width:"100%",boxShadow:`0 4px 20px rgba(168,85,247,0.35)`};
   const btnG={background:"rgba(60,0,100,0.3)",border:`1px solid ${C.border}`,borderRadius:12,padding:"10px",color:C.sub,fontWeight:600,fontSize:13,cursor:"pointer",flex:1};
 
-  const _now=new Date();
-  const thisMonth=`${_now.getFullYear()}-${String(_now.getMonth()+1).padStart(2,"0")}`;
-  const thisDues=dues[thisMonth]||{};
-  const paidCount=members.filter(m=>thisDues[m.id]?.paid).length;
-  const totalPaid=members.reduce((s,m)=>s+(thisDues[m.id]?.paid?Number(thisDues[m.id].amount)||0:0),0);
   const nextMatch=[...matches].filter(m=>!m.result).sort((a,b)=>a.date.localeCompare(b.date))[0];
   const activeCount=members.filter(m=>!m.status||m.status==="정상").length;
   const RC={win:C.purple,lose:C.red,draw:C.yellow},RL={win:"승",lose:"패",draw:"무"};
@@ -354,12 +372,7 @@ function App(){
 
         {tab==="home"&&(
           <div>
-            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:10,marginBottom:14}}>
-              <div style={{background:`linear-gradient(135deg,rgba(192,132,252,0.2),rgba(124,58,237,0.08))`,border:`1px solid rgba(192,132,252,0.3)`,borderRadius:16,padding:"14px 12px",backdropFilter:"blur(8px)"}}>
-                <div style={{fontSize:11,color:C.purple,fontWeight:700,marginBottom:6}}>{mLabel(thisMonth)} 회비</div>
-                <div style={{fontSize:28,fontWeight:900}}>{paidCount}<span style={{fontSize:13,color:C.sub,fontWeight:400}}>/{members.length}</span></div>
-                <div style={{fontSize:11,color:C.sub,marginTop:3}}>{totalPaid.toLocaleString()}원</div>
-              </div>
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:14}}>
               <div style={{background:`linear-gradient(135deg,rgba(232,121,249,0.2),rgba(192,132,252,0.08))`,border:`1px solid rgba(232,121,249,0.3)`,borderRadius:16,padding:"14px 12px",backdropFilter:"blur(8px)"}}>
                 <div style={{fontSize:11,color:C.pink,fontWeight:700,marginBottom:6}}>다음 경기</div>
                 {nextMatch?(<><div style={{fontSize:15,fontWeight:900}}>{nextMatch.date.slice(5).replace("-","/")}</div>{nextMatch.opponent&&<div style={{fontSize:11,color:C.sub,marginTop:3}}>vs {nextMatch.opponent}</div>}</>):<div style={{fontSize:13,color:C.sub,marginTop:6}}>일정 없음</div>}
@@ -372,13 +385,6 @@ function App(){
             </div>
             {(()=>{const done=matches.filter(m=>m.result);if(!done.length)return null;const w=done.filter(m=>m.result.outcome==="win").length,d=done.filter(m=>m.result.outcome==="draw").length,l=done.filter(m=>m.result.outcome==="lose").length;return(<div style={{...glassCard,marginBottom:12}}><div style={{fontSize:13,color:C.sub,marginBottom:10}}>시즌 전적</div><div style={{display:"flex",gap:24}}>{[[w,C.purple,"승"],[d,C.yellow,"무"],[l,C.red,"패"]].map(([n,c,lb])=>(<div key={lb}><div style={{fontSize:28,fontWeight:900,color:c}}>{n}</div><div style={{fontSize:12,color:C.sub}}>{lb}</div></div>))}</div></div>);})()}
             {activity.length>0&&(<div style={{...glassCard,marginBottom:12}}><div style={{fontSize:13,color:C.sub,marginBottom:10}}>최근 활동</div>{activity.slice(0,5).map(a=>(<div key={a.id} style={{display:"flex",justifyContent:"space-between",marginBottom:8,fontSize:13}}><span><span style={{color:C.purple,marginRight:6}}>•</span>{a.msg}</span><span style={{color:C.dim,fontSize:11,marginLeft:8,whiteSpace:"nowrap"}}>{relTime(a.ts||a.id)||a.time}</span></div>))}</div>)}
-            <div style={glassCard}>
-              <div style={{fontSize:13,color:C.sub,marginBottom:10}}>이번달 미납</div>
-              <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
-                {members.filter(m=>!thisDues[m.id]?.paid).map(m=>(<span key={m.id} style={{background:C.red+"22",border:`1px solid ${C.red}44`,borderRadius:20,padding:"3px 10px",fontSize:12,color:C.red}}>{m.name}</span>))}
-                {members.length>0&&members.every(m=>thisDues[m.id]?.paid)&&<span style={{fontSize:13,color:C.purple}}>🎉 전원 납부 완료!</span>}
-              </div>
-            </div>
           </div>
         )}
 
@@ -492,7 +498,7 @@ function App(){
               if(!top||top.ap===0)return null;
               return(
                 <div style={{display:"flex",justifyContent:"center",marginBottom:28,perspective:1200}}>
-                  <MvpCard name={top.name} gol={top.g} ast={top.a}/>
+                  <MvpCard name={top.name} gol={top.g} ast={top.a} rank={top.rank}/>
                 </div>
               );
             })()}
@@ -507,12 +513,12 @@ function App(){
               {ranked
                 .map(m=>({...m,totalGoals:m.g,totalAssists:m.a,totalAP:m.ap}))
                 .map((m,idx)=>{
-                  const medal=idx===0?"🥇":idx===1?"🥈":idx===2?"🥉":null;
-                  const nameColor=idx===0?C.yellow:idx===1?"#C0C0C0":idx===2?"#CD7F32":C.sub;
+                  const medal=m.rank===1?"🥇":m.rank===2?"🥈":m.rank===3?"🥉":null;
+                  const nameColor=m.rank===1?C.yellow:m.rank===2?"#C0C0C0":m.rank===3?"#CD7F32":C.sub;
                   return(
                     <div key={m.id} onClick={()=>openProfile(m.id)} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"11px 0",borderBottom:`1px solid rgba(59,7,100,0.4)`,cursor:"pointer"}}>
                       <div style={{display:"flex",alignItems:"center",gap:10}}>
-                        <span style={{fontSize:14,fontWeight:900,color:nameColor,minWidth:28,textAlign:"center"}}>{medal||`${idx+1}`}</span>
+                        <span style={{fontSize:14,fontWeight:900,color:nameColor,minWidth:28,textAlign:"center"}}>{medal||(m.rank?`${m.rank}`:"-")}</span>
                         <span style={{fontSize:15,fontWeight:700}}>{m.name}</span>
                         {m.id===myId&&<span style={{background:C.pink+"33",color:C.pink,fontSize:10,fontWeight:700,padding:"1px 6px",borderRadius:10}}>나</span>}
                         {m.mom>0&&<span style={{background:C.yellow+"22",color:C.yellow,fontSize:10,fontWeight:700,padding:"1px 6px",borderRadius:10}}>🏅{m.mom}</span>}
@@ -574,15 +580,12 @@ function App(){
         {tab==="player"&&(()=>{
           const p=ranked.find(m=>String(m.id)===String(viewId));
           if(!p)return <div style={{textAlign:"center",color:C.dim,fontSize:13,padding:"40px 0"}}>멤버 정보를 찾을 수 없습니다</div>;
-          const rank=ranked.indexOf(p)+1;
           const pid=String(p.id);
           const log=[...matches].sort((a,b)=>b.date.localeCompare(a.date)).map(mt=>{
             const g=Number((goals[mt.id]||{})[pid])||0,a=Number((assists[mt.id]||{})[pid])||0;
             const isMom=!!(mt.result&&mt.momClosed&&momWinners(mt.id).includes(pid));
             return{mt,g,a,isMom};
           }).filter(x=>x.g||x.a||x.isMom);
-          const dueRow=[...MONTHS].reverse().map(mo=>({mo,paid:!!(dues[mo]||{})[p.id]?.paid}));
-          const unpaid=dueRow.filter(d=>!d.paid).length;
           const stat=(v,l,c)=>(<div style={{...glassCard,padding:"12px 6px",textAlign:"center"}}><div style={{fontSize:24,fontWeight:900,color:c}}>{v}</div><div style={{fontSize:11,color:C.sub,marginTop:2}}>{l}</div></div>);
           return(
             <div>
@@ -594,15 +597,15 @@ function App(){
               </div>
               {p.customStatus&&<div style={{fontSize:12,color:C.sub,marginTop:-10,marginBottom:14}}>{p.customStatus}</div>}
               <div style={{display:"flex",justifyContent:"center",marginBottom:24,perspective:1200}}>
-                <MvpCard name={p.name} gol={p.g} ast={p.a}/>
+                <MvpCard name={p.name} gol={p.g} ast={p.a} rank={p.rank}/>
               </div>
               <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:8,marginBottom:14}}>
-                {stat(p.ap>0?`${rank}위`:"-","순위",C.pink)}
+                {stat(p.rank?`${p.rank}위`:"-","순위",C.pink)}
                 {stat(p.g,"⚽ 골",C.purple)}
                 {stat(p.a,"🅰️ 어시","#60a5fa")}
                 {stat(p.mom,"🏅 MOM",C.yellow)}
               </div>
-              <div style={{...glassCard,marginBottom:14}}>
+              <div style={glassCard}>
                 <div style={{fontSize:13,color:C.sub,marginBottom:10}}>경기별 기록</div>
                 {log.length===0?<div style={{fontSize:13,color:C.dim}}>아직 기록이 없습니다</div>:log.map(({mt,g,a,isMom})=>(
                   <div key={mt.id} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"8px 0",borderBottom:`1px solid rgba(59,7,100,0.4)`,fontSize:13}}>
@@ -619,84 +622,12 @@ function App(){
                   </div>
                 ))}
               </div>
-              <div style={glassCard}>
-                <div style={{display:"flex",justifyContent:"space-between",marginBottom:10}}>
-                  <span style={{fontSize:13,color:C.sub}}>회비 납부 (최근 12개월)</span>
-                  <span style={{fontSize:12,fontWeight:700,color:unpaid?C.red:C.purple}}>{unpaid?`미납 ${unpaid}개월`:"전부 납부"}</span>
-                </div>
-                <div style={{display:"grid",gridTemplateColumns:"repeat(6,1fr)",gap:6}}>
-                  {dueRow.map(({mo,paid})=>(
-                    <div key={mo} style={{textAlign:"center",padding:"6px 0",borderRadius:8,background:paid?C.purple+"22":C.red+"14",border:`1px solid ${paid?C.purple+"44":C.red+"33"}`}}>
-                      <div style={{fontSize:10,color:C.sub}}>{mo.slice(2,4)}.{+mo.slice(5)}</div>
-                      <div style={{fontSize:12,fontWeight:700,color:paid?C.purple:C.red}}>{paid?"납부":"미납"}</div>
-                    </div>
-                  ))}
-                </div>
-              </div>
             </div>
           );
         })()}
 
         {tab==="manage"&&(
           <div>
-            <div style={{display:"flex",background:"rgba(60,0,100,0.3)",borderRadius:14,padding:4,marginBottom:18,gap:4,border:`1px solid ${C.border}`}}>
-              {[["dues","💰 회비"],["team","⚙️ 팀"]].map(([key,label])=>(
-                <button key={key} onClick={()=>setManTab(key)} style={{flex:1,background:manTab===key?`linear-gradient(135deg,${C.purple2},${C.purple})`:"transparent",border:"none",borderRadius:10,padding:"9px 0",color:manTab===key?"#fff":C.sub,fontWeight:manTab===key?700:400,fontSize:13,cursor:"pointer",fontFamily:"inherit",boxShadow:manTab===key?`0 4px 15px rgba(124,58,237,0.4)`:"none"}}>{label}</button>
-              ))}
-            </div>
-
-            {manTab==="dues"&&(
-              <div>
-                <div style={{display:"flex",flexWrap:"wrap",gap:8,marginBottom:14}}>
-                  {MONTHS.map(m=>(<button key={m} onClick={()=>setDueMonth(m)} style={{background:dueMonth===m?`linear-gradient(135deg,${C.purple2},${C.purple})`:"rgba(60,0,100,0.3)",border:`1px solid ${dueMonth===m?"rgba(168,85,247,0.6)":C.border}`,borderRadius:20,padding:"6px 14px",color:dueMonth===m?"#fff":C.sub,fontWeight:dueMonth===m?700:400,fontSize:13,cursor:"pointer",fontFamily:"inherit",boxShadow:dueMonth===m?`0 4px 12px rgba(124,58,237,0.4)`:"none"}}>{mLabel(m)}</button>))}
-                </div>
-                {(()=>{const md=dues[dueMonth]||{};const pc=members.filter(m=>md[m.id]?.paid).length;const tp=members.reduce((s,m)=>s+(md[m.id]?.paid?Number(md[m.id].amount)||0:0),0);return(<div style={{...glassCard,marginBottom:14}}><div style={{display:"flex",justifyContent:"space-between",marginBottom:8}}><span style={{fontSize:13,color:C.sub}}>{mLabel(dueMonth)} 납부 현황</span><span style={{fontSize:13,fontWeight:700,color:C.purple}}>{pc}/{members.length}명</span></div><div style={{background:"rgba(60,0,100,0.4)",borderRadius:99,height:6,overflow:"hidden",marginBottom:8}}><div style={{width:`${members.length?pc/members.length*100:0}%`,height:"100%",background:`linear-gradient(90deg,${C.purple2},${C.purple})`,borderRadius:99}}/></div><div style={{fontSize:12,color:C.sub}}>수령 {tp.toLocaleString()}원</div></div>);})()}
-                <div style={glassCard}>
-                  <div style={{fontSize:14,fontWeight:700,marginBottom:14}}>멤버별 현황</div>
-                  {members.map(m=>{
-                    const mdue=(dues[dueMonth]||{})[m.id]||{paid:false,amount:0};
-                    const isMe=m.id===myId,isEditing=editDue===m.id&&isAdmin;
-                    const dots=DOT_MONTHS.map(mo=>(dues[mo]||{})[m.id]?.paid||false);
-                    return(
-                      <div key={m.id} style={{borderBottom:`1px solid rgba(59,7,100,0.6)`,paddingBottom:12,marginBottom:12}}>
-                        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
-                          <div style={{display:"flex",alignItems:"center",gap:6}}>
-                            <span style={{fontSize:14,fontWeight:700}}>{m.name}</span>
-                            {m.id===ADMIN_ID&&<span style={{background:C.purple+"33",color:C.purple,fontSize:10,fontWeight:700,padding:"1px 6px",borderRadius:10}}>관리자</span>}
-                            {isMe&&<span style={{background:C.pink+"33",color:C.pink,fontSize:10,fontWeight:700,padding:"1px 6px",borderRadius:10}}>나</span>}
-                          </div>
-                          <div style={{display:"flex",gap:6,alignItems:"center"}}>
-                            <span style={{padding:"3px 10px",borderRadius:20,fontSize:11,fontWeight:700,background:mdue.paid?C.purple+"22":C.red+"22",color:mdue.paid?C.purple:C.red,border:`1px solid ${mdue.paid?C.purple+"44":C.red+"44"}`}}>{mdue.paid?"납부":"미납"}</span>
-                            {isAdmin&&<button onClick={()=>{if(isEditing)setEditDue(null);else{setEditDue(m.id);setEditAmt(mdue.amount||"");setEditCustom(m.customStatus||"");}}} style={{background:"rgba(60,0,100,0.4)",border:`1px solid ${C.border}`,borderRadius:8,padding:"3px 10px",color:C.sub,fontSize:11,cursor:"pointer"}}>{isEditing?"닫기":"수정"}</button>}
-                          </div>
-                        </div>
-                        <div style={{display:"flex",gap:5,marginBottom:4}}>{dots.map((p,i)=><div key={i} style={{width:10,height:10,borderRadius:"50%",background:p?C.purple:C.red,opacity:p?1:0.4,boxShadow:p?`0 0 6px rgba(192,132,252,0.6)`:"none"}}/>)}</div>
-                        {m.status&&m.status!=="정상"&&<div style={{marginBottom:4}}><StatusBadge status={m.status}/></div>}
-                        {m.customStatus&&<div style={{fontSize:12,color:C.sub,marginTop:4}}>{m.customStatus}</div>}
-                        {isEditing&&(
-                          <div style={{background:"rgba(60,0,100,0.4)",borderRadius:12,padding:12,marginTop:10,border:`1px solid ${C.border}`}}>
-                            <div style={{display:"flex",gap:8,marginBottom:10}}>
-                              <button onClick={()=>setDue(m,true)} style={{...btnP,flex:1,padding:"10px"}}>✅ 납부</button>
-                              <button onClick={()=>setDue(m,false)} style={{...btnP,flex:1,padding:"10px",background:`linear-gradient(135deg,#b91c1c,${C.red})`}}>❌ 미납</button>
-                            </div>
-                            <div style={{fontSize:12,color:C.sub,marginBottom:8}}>상태</div>
-                            <div style={{display:"flex",gap:8,marginBottom:10}}>
-                              {["정상","부상","휴식"].map(s=>{const col=s==="정상"?C.purple:s==="부상"?C.red:C.yellow;return(<button key={s} onClick={()=>{db.ref(`members/${m._k}`).update({status:s});addLog(`${m.name} 상태 → ${s}`);}} style={{flex:1,background:m.status===s?col+"33":"rgba(60,0,100,0.3)",border:`1px solid ${m.status===s?col+"66":C.border}`,borderRadius:10,padding:"7px",color:m.status===s?col:C.sub,fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>{s}</button>);})}
-                            </div>
-                            <div style={{display:"flex",gap:8}}>
-                              <input value={editCustom} onChange={e=>setEditCustom(e.target.value)} placeholder="직접입력" style={{...iS,flex:1}}/>
-                              <button onClick={()=>db.ref(`members/${m._k}`).update({customStatus:editCustom})} style={{...btnP,width:"auto",padding:"10px 14px"}}>적용</button>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-
-            {manTab==="team"&&(
               <div>
                 {!isAdmin?(<div style={{...glassCard,textAlign:"center",padding:"30px 20px"}}><div style={{fontSize:32,marginBottom:12}}>🔒</div><div style={{fontSize:14,fontWeight:700,marginBottom:6}}>관리자 전용</div><div style={{fontSize:12,color:C.sub}}>팀 관리는 관리자만 접근 가능합니다</div></div>):(
                   <>
@@ -709,27 +640,42 @@ function App(){
                     </div>
                     {addMember&&<div style={{...glassCard,marginBottom:12}}><div style={{display:"flex",gap:8}}><input value={newMemberName} onChange={e=>setNewMemberName(e.target.value)} placeholder="이름 입력" style={{...iS,flex:1}}/><button onClick={()=>{if(!newMemberName.trim())return;const nm={id:Date.now(),name:newMemberName.trim(),status:"정상",customStatus:""};db.ref("members").push(nm);addLog(`멤버 추가: ${newMemberName}`);setNewMemberName("");setAddMember(false);}} style={{...btnP,width:"auto",padding:"10px 14px"}}>추가</button><button onClick={()=>setAddMember(false)} style={{...btnG,width:"auto",padding:"10px 12px"}}>취소</button></div></div>}
                     <div style={glassCard}>
-                      {members.map(m=>(<div key={m.id} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"14px 0",borderBottom:`1px solid rgba(59,7,100,0.6)`}}>
+                      {members.map(m=>(<div key={m.id} style={{padding:"12px 0",borderBottom:`1px solid rgba(59,7,100,0.6)`}}>
+                        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
                         <div style={{display:"flex",alignItems:"center",gap:8}}>
                           <span style={{fontSize:15,fontWeight:600}}>{m.name}</span>
                           {m.id===ADMIN_ID&&<span style={{background:C.purple+"33",color:C.purple,fontSize:10,fontWeight:700,padding:"1px 6px",borderRadius:10}}>관리자</span>}
                           {m.id===myId&&<span style={{background:C.pink+"33",color:C.pink,fontSize:10,fontWeight:700,padding:"1px 6px",borderRadius:10}}>나</span>}
                           {m.status&&m.status!=="정상"&&<StatusBadge status={m.status}/>}
                         </div>
-                        {m.id!==ADMIN_ID&&<button onClick={()=>{if(confirm(`${m.name}님을 삭제할까요?`)){db.ref(`members/${m._k}`).remove();addLog(`멤버 삭제: ${m.name}`);}}} style={{background:C.red+"22",border:`1px solid ${C.red}44`,borderRadius:10,padding:"4px 12px",color:C.red,fontSize:12,fontWeight:700,cursor:"pointer"}}>삭제</button>}
+                        <button onClick={()=>{if(editMember===m.id)setEditMember(null);else{setEditMember(m.id);setEditCustom(m.customStatus||"");}}} style={{background:"rgba(60,0,100,0.4)",border:`1px solid ${C.border}`,borderRadius:10,padding:"4px 12px",color:C.sub,fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>{editMember===m.id?"닫기":"수정"}</button>
+                        </div>
+                        {m.customStatus&&<div style={{fontSize:12,color:C.sub,marginTop:4}}>{m.customStatus}</div>}
+                        {editMember===m.id&&(
+                          <div style={{background:"rgba(60,0,100,0.4)",borderRadius:12,padding:12,marginTop:10,border:`1px solid ${C.border}`}}>
+                            <div style={{fontSize:12,color:C.sub,marginBottom:8}}>상태</div>
+                            <div style={{display:"flex",gap:8,marginBottom:10}}>
+                              {["정상","부상","휴식"].map(s=>{const col=s==="정상"?C.purple:s==="부상"?C.red:C.yellow;return(<button key={s} onClick={()=>{db.ref(`members/${m._k}`).update({status:s});addLog(`${m.name} 상태 → ${s}`);}} style={{flex:1,background:m.status===s?col+"33":"rgba(60,0,100,0.3)",border:`1px solid ${m.status===s?col+"66":C.border}`,borderRadius:10,padding:"7px",color:m.status===s?col:C.sub,fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>{s}</button>);})}
+                            </div>
+                            <div style={{display:"flex",gap:8,marginBottom:m.id!==ADMIN_ID?10:0}}>
+                              <input value={editCustom} onChange={e=>setEditCustom(e.target.value)} placeholder="메모 직접입력 (예: 12월 복귀)" style={{...iS,flex:1}}/>
+                              <button onClick={()=>db.ref(`members/${m._k}`).update({customStatus:editCustom.trim()})} style={{...btnP,width:"auto",padding:"10px 14px"}}>적용</button>
+                            </div>
+                            {m.id!==ADMIN_ID&&<button onClick={()=>{if(confirm(`${m.name}님을 삭제할까요?`)){db.ref(`members/${m._k}`).remove();addLog(`멤버 삭제: ${m.name}`);setEditMember(null);}}} style={{...btnG,width:"100%",color:C.red,borderColor:C.red+"44"}}>멤버 삭제</button>}
+                          </div>
+                        )}
                       </div>))}
                     </div>
                   </>
                 )}
               </div>
-            )}
           </div>
         )}
 
       </div>
 
       <div style={{position:"fixed",bottom:0,left:"50%",transform:"translateX(-50%)",width:"100%",maxWidth:480,background:"rgba(7,0,15,0.95)",borderTop:`1px solid rgba(168,85,247,0.25)`,display:"flex",padding:"6px 0 10px",zIndex:100,backdropFilter:"blur(12px)",WebkitBackdropFilter:"blur(12px)"}}>
-        {[["home","⚽","홈"],["match","📅","경기"],["stats","🏆","스탯"],["my","👤","MY"],["manage","📋","관리"]].map(([key,icon,label])=>{
+        {[["home","⚽","홈"],["match","📅","경기"],["stats","🏆","스탯"],["my","👤","MY"],...(isAdmin?[["manage","📋","관리"]]:[])].map(([key,icon,label])=>{
           const active=key==="my"?(tab==="player"&&String(viewId)===String(myId)):key==="stats"?(tab==="stats"||(tab==="player"&&String(viewId)!==String(myId))):tab===key;
           return(
           <button key={key} onClick={()=>key==="my"?openProfile(myId):setTab(key)} style={{flex:1,background:"none",border:"none",cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",gap:2,padding:"4px 0"}}>
