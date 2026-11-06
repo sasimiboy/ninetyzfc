@@ -133,6 +133,34 @@ function toArr(v){if(!v)return[];if(Array.isArray(v))return v.filter(Boolean);re
 function toKeyed(v){const out=[];if(!v)return out;if(Array.isArray(v))v.forEach((x,i)=>{if(x)out.push({...x,_k:String(i)});});else Object.entries(v).forEach(([k,x])=>{if(x)out.push({...x,_k:k});});return out;}
 function relTime(ts){if(typeof ts!=="number")return"";const s=(Date.now()-ts)/1000;if(s<60)return"방금 전";if(s<3600)return`${Math.floor(s/60)}분 전`;if(s<86400)return`${Math.floor(s/3600)}시간 전`;if(s<86400*7)return`${Math.floor(s/86400)}일 전`;const d=new Date(ts);return`${d.getMonth()+1}/${d.getDate()}`;}
 function bump(path,d){db.ref(path).transaction(c=>Math.max(0,(Number(c)||0)+d));}
+// ===== 날씨 (Open-Meteo, API 키 불필요) =====
+// 경기장이 모두 서울 시내(도곡·용산·잠실)라 서울 한 지점 예보 사용
+const WX_URL="https://api.open-meteo.com/v1/forecast?latitude=37.51&longitude=127.02&hourly=temperature_2m,apparent_temperature,precipitation_probability,weather_code,wind_speed_10m&wind_speed_unit=ms&timezone=Asia%2FSeoul&forecast_days=16";
+function wxDesc(c){
+  if(c===0)return["☀️","맑음"];if(c===1)return["🌤️","대체로 맑음"];if(c===2)return["⛅","구름 조금"];if(c===3)return["☁️","흐림"];
+  if(c===45||c===48)return["🌫️","안개"];if(c>=51&&c<=57)return["🌦️","이슬비"];if(c>=61&&c<=67)return["🌧️","비"];
+  if(c>=71&&c<=77)return["🌨️","눈"];if(c>=80&&c<=82)return["🌦️","소나기"];if(c===85||c===86)return["🌨️","눈 소나기"];if(c>=95)return["⛈️","뇌우"];
+  return["🌡️","-"];
+}
+// 경기 시작 시각(정시 내림)의 예보. 없으면 null
+function matchWx(wx,match){
+  if(!wx||!match.date||!match.time)return null;
+  const i=wx.time.indexOf(`${match.date}T${match.time.slice(0,2)}:00`);
+  if(i<0)return null;
+  const v=k=>wx[k][i];
+  if(v("temperature_2m")==null)return null;
+  return{t:Math.round(v("temperature_2m")),feel:Math.round(v("apparent_temperature")),pop:v("precipitation_probability")??0,code:v("weather_code"),wind:Math.round(v("wind_speed_10m"))};
+}
+function wxTips(w){
+  const t=[];
+  if(w.pop>=60)t.push("☔ 비 예보 · 우천 진행 여부 확인");
+  else if(w.pop>=30)t.push("🌂 비 올 수 있음");
+  if(w.feel<=0)t.push("🧤 체감 영하 · 방한 준비");
+  if(w.feel>=30)t.push("🥵 더위 주의 · 물 충분히");
+  if(w.wind>=9)t.push("💨 강풍");
+  return t;
+}
+function isFuture(match){return new Date(`${match.date}T${match.time||"00:00"}:00+09:00`).getTime()>Date.now();}
 function load(key){try{const s=localStorage.getItem(key);return s?JSON.parse(s):null;}catch(e){return null;}}
 
 function StatusBadge({status}){
@@ -241,6 +269,7 @@ function App(){
   const [attOpen,setAttOpen]=useState(null);
   const [viewId,setViewId]=useState(null);
   const [,setTick]=useState(0);
+  const [wx,setWx]=useState(null);
 
   const isAdmin=user?.isAdmin===true;
   const myId=user?.id;
@@ -257,6 +286,12 @@ function App(){
     db.ref("attendance").on("value",s=>{setAttendance(s.val()||{});done.attendance=true;chk();});
     const t=setInterval(()=>setTick(x=>x+1),60000);
     return()=>{clearInterval(t);["members","matches","goals","assists","actLog","mom","attendance"].forEach(k=>db.ref(k).off());};
+  },[]);
+
+  // 날씨: 30분 캐시, 실패하면 날씨 영역만 숨김
+  useEffect(()=>{
+    try{const c=JSON.parse(sessionStorage.getItem("nfc_wx")||"null");if(c&&Date.now()-c.at<30*60000){setWx(c.h);return;}}catch(e){}
+    fetch(WX_URL).then(r=>r.ok?r.json():null).then(d=>{if(!d||!d.hourly)return;setWx(d.hourly);try{sessionStorage.setItem("nfc_wx",JSON.stringify({at:Date.now(),h:d.hourly}));}catch(e){}}).catch(()=>{});
   },[]);
 
   useEffect(()=>{try{if(user)localStorage.setItem("nfc_user",JSON.stringify(user));else localStorage.removeItem("nfc_user");}catch(e){}},[user]);
@@ -389,7 +424,7 @@ function App(){
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:14}}>
               <div style={{background:`linear-gradient(135deg,rgba(232,121,249,0.2),rgba(192,132,252,0.08))`,border:`1px solid rgba(232,121,249,0.3)`,borderRadius:16,padding:"14px 12px",backdropFilter:"blur(8px)"}}>
                 <div style={{fontSize:11,color:C.pink,fontWeight:700,marginBottom:6}}>다음 경기</div>
-                {nextMatch?(<><div style={{fontSize:15,fontWeight:900}}>{nextMatch.date.slice(5).replace("-","/")}</div>{nextMatch.opponent&&<div style={{fontSize:11,color:C.sub,marginTop:3}}>vs {nextMatch.opponent}</div>}</>):<div style={{fontSize:13,color:C.sub,marginTop:6}}>일정 없음</div>}
+                {nextMatch?(<><div style={{fontSize:15,fontWeight:900}}>{nextMatch.date.slice(5).replace("-","/")}</div>{nextMatch.opponent&&<div style={{fontSize:11,color:C.sub,marginTop:3}}>vs {nextMatch.opponent}</div>}{(()=>{const w=matchWx(wx,nextMatch);if(!w)return null;const[ic,lb]=wxDesc(w.code);return <div style={{fontSize:12,marginTop:5,fontWeight:700}}>{ic} {w.t}° <span style={{color:C.sub,fontWeight:400,fontSize:11}}>{lb}{w.pop>=30?` · ☔${w.pop}%`:""}</span></div>;})()}</>):<div style={{fontSize:13,color:C.sub,marginTop:6}}>일정 없음</div>}
               </div>
               <div style={{background:`linear-gradient(135deg,rgba(124,58,237,0.2),rgba(109,40,217,0.08))`,border:`1px solid rgba(124,58,237,0.3)`,borderRadius:16,padding:"14px 12px",backdropFilter:"blur(8px)"}}>
                 <div style={{fontSize:11,color:C.purple2,fontWeight:700,marginBottom:6}}>멤버 현황</div>
@@ -439,6 +474,24 @@ function App(){
                       {match.result?<div style={{fontSize:24,fontWeight:900,color:RC[match.result.outcome]}}>{match.result.our} - {match.result.opp}</div>:<div style={{fontSize:12,color:C.purple,fontWeight:700,marginTop:4}}>예정</div>}
                     </div>
                   </div>
+                  {!match.result&&isFuture(match)&&(()=>{
+                    const w=matchWx(wx,match);
+                    if(!w)return wx?<div style={{fontSize:11,color:C.dim,marginBottom:8}}>🌤️ 날씨는 경기 16일 전부터 볼 수 있어요</div>:null;
+                    const[ic,lb]=wxDesc(w.code);const tips=wxTips(w);
+                    return(
+                      <div style={{background:"rgba(56,189,248,0.07)",border:"1px solid rgba(56,189,248,0.25)",borderRadius:12,padding:"10px 12px",marginBottom:8}}>
+                        <div style={{display:"flex",alignItems:"center",gap:10}}>
+                          <span style={{fontSize:30,lineHeight:1}}>{ic}</span>
+                          <div style={{flex:1,minWidth:0}}>
+                            <div style={{fontSize:15,fontWeight:900}}>{w.t}° <span style={{fontSize:13,fontWeight:700}}>{lb}</span></div>
+                            <div style={{fontSize:11,color:C.sub,marginTop:2}}>체감 {w.feel}° · 강수 {w.pop}% · 바람 {w.wind}m/s</div>
+                          </div>
+                          <div style={{fontSize:10,color:C.dim,textAlign:"right",flexShrink:0}}>{match.time.slice(0,2)}시<br/>예보</div>
+                        </div>
+                        {tips.length>0&&<div style={{display:"flex",flexWrap:"wrap",gap:5,marginTop:8}}>{tips.map(t=><span key={t} style={{fontSize:11,color:"#fff",background:"rgba(56,189,248,0.15)",borderRadius:10,padding:"2px 8px"}}>{t}</span>)}</div>}
+                      </div>
+                    );
+                  })()}
                   {isAdmin&&resultEdit===match.id&&(
                     <div style={{background:"rgba(60,0,100,0.4)",borderRadius:12,padding:12,marginBottom:10,border:`1px solid ${C.border}`}}>
                       <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:10}}>
