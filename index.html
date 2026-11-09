@@ -960,12 +960,12 @@ function App(){
                 {p.id===myId&&<span style={{background:C.pink+"33",color:C.pink,fontSize:10,fontWeight:700,padding:"1px 6px",borderRadius:10}}>나</span>}
                 <StatusBadge status={p.status||"정상"}/>
               </div>
-              <div style={{fontSize:12,color:C.sub,marginTop:-10,marginBottom:14}}>참석 {matches.filter(mt=>isAttending(mt.id,p.id)).length}경기{p.customStatus?` · ${p.customStatus}`:""}</div>
+              {p.customStatus&&<div style={{fontSize:12,color:C.sub,marginTop:-10,marginBottom:14}}>{p.customStatus}</div>}
               <div style={{display:"flex",justifyContent:"center",marginBottom:24,perspective:1200}}>
                 <MvpCard name={p.name} gol={p.g} ast={p.a} rank={p.rank}/>
               </div>
               <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:8,marginBottom:14}}>
-                {stat(p.rank?`${p.rank}위`:"-","순위",C.pink)}
+                {stat(matches.filter(mt=>isAttending(mt.id,p.id)).length,"👥 참석",C.pink)}
                 {stat(p.g,"⚽ 골",C.purple)}
                 {stat(p.a,"🅰️ 어시","#60a5fa")}
                 {stat(p.mom,"🏅 MOM",C.yellow)}
