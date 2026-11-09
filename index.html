@@ -99,6 +99,8 @@ const {useState,useEffect,useRef} = React;
 const db = window._db;
 
 const ADMIN_ID=1,ADMIN_PW="1886";
+// ===== 포인트 이벤트 산식 (공지 내용과 동일하게 유지) =====
+const EV_PTS={attend:6,win:4,draw:0,ap:1,mom:6};
 const COLW=48; // 공격포인트 순위표 숫자 칸 너비 (헤더/행 공통)
 const C={
   bg:"#07000f",card:"#100020",card2:"#180030",
@@ -268,6 +270,9 @@ function App(){
   const [attendance,setAttendance]=useState({});
   const [attOpen,setAttOpen]=useState(null);
   const [viewId,setViewId]=useState(null);
+  const [eventCfg,setEventCfg]=useState(null);
+  const [statView,setStatView]=useState("event");
+  const [evForm,setEvForm]=useState(null);
   const [,setTick]=useState(0);
   const [wx,setWx]=useState(null);
 
@@ -275,7 +280,7 @@ function App(){
   const myId=user?.id;
 
   useEffect(()=>{
-    let done={members:false,matches:false,goals:false,assists:false,actLog:false,mom:false,attendance:false};
+    let done={members:false,matches:false,goals:false,assists:false,actLog:false,mom:false,attendance:false,event:false};
     function chk(){if(Object.values(done).every(Boolean))setLoading(false);}
     db.ref("members").on("value",s=>{const v=s.val();if(v)setMembers(toKeyed(v));else db.ref("members").set(INIT_MEMBERS);done.members=true;chk();});
     db.ref("matches").on("value",s=>{setMatches(toKeyed(s.val()));done.matches=true;chk();});
@@ -284,8 +289,9 @@ function App(){
     db.ref("actLog").on("value",s=>{const a=toArr(s.val()).sort((x,y)=>(y.ts||y.id||0)-(x.ts||x.id||0));setActivity(a);done.actLog=true;chk();});
     db.ref("mom").on("value",s=>{setMom(s.val()||{});done.mom=true;chk();});
     db.ref("attendance").on("value",s=>{setAttendance(s.val()||{});done.attendance=true;chk();});
+    db.ref("event").on("value",s=>{const v=s.val();setEventCfg(v&&v.start&&v.end?v:null);done.event=true;chk();});
     const t=setInterval(()=>setTick(x=>x+1),60000);
-    return()=>{clearInterval(t);["members","matches","goals","assists","actLog","mom","attendance"].forEach(k=>db.ref(k).off());};
+    return()=>{clearInterval(t);["members","matches","goals","assists","actLog","mom","attendance","event"].forEach(k=>db.ref(k).off());};
   },[]);
 
   // 날씨: 30분 캐시, 실패하면 날씨 영역만 숨김
@@ -353,6 +359,45 @@ function App(){
     border:`1px solid rgba(168,85,247,0.2)`,borderRadius:16,padding:"14px 16px",
     backdropFilter:"blur(10px)",WebkitBackdropFilter:"blur(10px)"
   };
+
+  // ===== 포인트 이벤트 계산 =====
+  // 반영 경기: 기간 안 + 결과 입력 + 관리자가 MOM 마감한 경기
+  const fmtPt=n=>Number.isInteger(n)?String(n):n.toFixed(1);
+  const ev=(()=>{
+    if(!eventCfg)return null;
+    const inPeriod=matches.filter(m=>m.date>=eventCfg.start&&m.date<=eventCfg.end);
+    const confirmed=inPeriod.filter(m=>m.result&&m.momClosed);
+    const pending=inPeriod.filter(m=>!(m.result&&m.momClosed));
+    const need=Math.ceil(confirmed.length/2);
+    const rows=members.map(p=>{
+      const pid=String(p.id);let att=0,win=0,draw=0,ap=0,momPts=0,momCnt=0;
+      confirmed.forEach(mt=>{
+        const here=isAttending(mt.id,p.id);
+        if(here){att++;if(mt.result.outcome==="win")win++;if(mt.result.outcome==="draw")draw++;}
+        ap+=(Number((goals[mt.id]||{})[pid])||0)+(Number((assists[mt.id]||{})[pid])||0);
+        const w=momWinners(mt.id);if(w.includes(pid)){momPts+=EV_PTS.mom/w.length;momCnt++;}
+      });
+      const total=att*EV_PTS.attend+win*EV_PTS.win+draw*EV_PTS.draw+ap*EV_PTS.ap+momPts;
+      return{...p,att,win,draw,ap,momPts,momCnt,total,eligible:confirmed.length>0&&att>=need};
+    });
+    const r3=x=>Math.round(x*1000);
+    const cmp=(a,b)=>r3(b.total)-r3(a.total)||b.att-a.att||r3(b.momPts)-r3(a.momPts)||b.ap-a.ap;
+    const elig=rows.filter(r=>r.eligible).sort(cmp);
+    elig.forEach(r=>{r.rank=1+elig.filter(o=>cmp(o,r)<0).length;});
+    const inelig=rows.filter(r=>!r.eligible).sort(cmp);
+    // 관리자 점검: 참석 미등록 확정 경기, 참석 안 했는데 골/어시 기록, 기간 내 마감 안 된 지난 경기
+    const warn=[];
+    confirmed.forEach(mt=>{
+      const lbl=`${mt.date.slice(5).replace("-","/")} ${mt.opponent?"vs "+mt.opponent:""}`;
+      if(attendIds(mt.id).length===0)warn.push(`${lbl}: 참석자 미등록 (전원 참석 0점)`);
+      const off=members.filter(p=>!isAttending(mt.id,p.id)&&((Number((goals[mt.id]||{})[p.id])||0)+(Number((assists[mt.id]||{})[p.id])||0))>0).map(p=>p.name);
+      if(off.length)warn.push(`${lbl}: 골/어시 기록 있는데 참석 미등록 - ${off.join(", ")}`);
+    });
+    pending.filter(mt=>!isFuture(mt)).forEach(mt=>warn.push(`${mt.date.slice(5).replace("-","/")} ${mt.opponent?"vs "+mt.opponent:""}: ${mt.result?"MOM 마감 전":"결과 입력 전"} (아직 점수 미반영)`));
+    const today=new Date(Date.now()+9*3600000).toISOString().slice(0,10);
+    return{cfg:eventCfg,confirmed,pending,need,elig,inelig,warn,active:today>=eventCfg.start&&today<=eventCfg.end,ended:today>eventCfg.end};
+  })();
+  const evMine=ev&&[...ev.elig,...ev.inelig].find(r=>String(r.id)===String(myId));
 
   // ===== 경기 카드 =====
   const DOW=["일","월","화","수","목","금","토"];
@@ -553,6 +598,20 @@ function App(){
 
         {tab==="home"&&(
           <div>
+            {ev&&!ev.ended&&(
+              <div onClick={()=>{setStatView("event");setTab("stats");}} style={{...glassCard,marginBottom:12,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"space-between",gap:10,border:`1px solid ${C.pink}55`}}>
+                <div style={{minWidth:0}}>
+                  <div style={{fontSize:14,fontWeight:900}}>🎁 {ev.cfg.name||"포인트 이벤트"} {ev.active?"진행중":"예정"}</div>
+                  <div style={{fontSize:11,color:C.sub,marginTop:3}}>{ev.cfg.start.slice(5).replace("-","/")} ~ {ev.cfg.end.slice(5).replace("-","/")} · 확정 {ev.confirmed.length}경기</div>
+                </div>
+                <div style={{textAlign:"right",flexShrink:0}}>
+                  {evMine&&ev.confirmed.length>0?(<>
+                    <div style={{fontSize:18,fontWeight:900,color:C.pink}}>{evMine.rank?`${evMine.rank}위`:"자격 미달"}</div>
+                    <div style={{fontSize:11,color:C.sub}}>{fmtPt(evMine.total)}점</div>
+                  </>):<div style={{fontSize:12,color:C.sub}}>순위 보기 ›</div>}
+                </div>
+              </div>
+            )}
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:14}}>
               <div style={{background:`linear-gradient(135deg,rgba(232,121,249,0.2),rgba(192,132,252,0.08))`,border:`1px solid rgba(232,121,249,0.3)`,borderRadius:16,padding:"14px 12px",backdropFilter:"blur(8px)"}}>
                 <div style={{fontSize:11,color:C.pink,fontWeight:700,marginBottom:6}}>다음 경기</div>
@@ -608,6 +667,89 @@ function App(){
 
         {tab==="stats"&&(
           <div>
+            {ev&&(
+              <div style={{display:"flex",background:"rgba(60,0,100,0.3)",borderRadius:14,padding:4,marginBottom:16,gap:4,border:`1px solid ${C.border}`}}>
+                {[["event","🎁 포인트 이벤트"],["ap","🏆 공격포인트"]].map(([k,l])=>(
+                  <button key={k} onClick={()=>setStatView(k)} style={{flex:1,background:statView===k?`linear-gradient(135deg,${C.purple2},${C.purple})`:"transparent",border:"none",borderRadius:10,padding:"9px 0",color:statView===k?"#fff":C.sub,fontWeight:statView===k?700:400,fontSize:13,cursor:"pointer",fontFamily:"inherit"}}>{l}</button>
+                ))}
+              </div>
+            )}
+            {ev&&statView==="event"&&(()=>{
+              const md=d=>d.slice(5).replace("-","/");
+              const medal=r=>r===1?"🥇":r===2?"🥈":r===3?"🥉":null;
+              const line=(r)=>[`참석 ${r.att}`,r.win?`승 ${r.win}`:null,r.ap?`공격 ${r.ap}`:null,r.momPts?`MOM ${fmtPt(r.momPts)}`:null].filter(Boolean).join(" · ");
+              return(
+                <div>
+                  <div style={{...glassCard,marginBottom:12}}>
+                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:8}}>
+                      <div>
+                        <div style={{fontSize:17,fontWeight:900}}>🎁 {ev.cfg.name||"포인트 이벤트"}</div>
+                        <div style={{fontSize:12,color:C.sub,marginTop:4}}>{md(ev.cfg.start)} ~ {md(ev.cfg.end)} · 확정 {ev.confirmed.length}경기{ev.pending.length?` · 대기 ${ev.pending.length}경기`:""}</div>
+                      </div>
+                      <span style={{flexShrink:0,padding:"3px 10px",borderRadius:20,fontSize:11,fontWeight:900,background:ev.ended?C.dim+"33":C.purple+"22",color:ev.ended?C.sub:C.purple,border:`1px solid ${ev.ended?C.dim:C.purple}44`}}>{ev.ended?"종료":ev.active?"진행중":"예정"}</span>
+                    </div>
+                    <div style={{fontSize:11,color:C.dim,marginTop:8}}>수상 자격: 확정 경기의 50% 이상 참석{ev.confirmed.length?` (현재 ${ev.need}경기 이상)`:""}</div>
+                  </div>
+
+                  {isAdmin&&ev.warn.length>0&&(
+                    <div style={{...glassCard,marginBottom:12,border:`1px solid ${C.yellow}55`,background:"rgba(251,191,36,0.06)"}}>
+                      <div style={{fontSize:12,fontWeight:900,color:C.yellow,marginBottom:6}}>⚠️ 관리자 점검 ({ev.warn.length})</div>
+                      {ev.warn.map((w,i)=><div key={i} style={{fontSize:12,color:C.sub,padding:"3px 0"}}>• {w}</div>)}
+                    </div>
+                  )}
+
+                  <div style={{...glassCard,marginBottom:12}}>
+                    {ev.confirmed.length===0&&<div style={{fontSize:13,color:C.dim,textAlign:"center",padding:"16px 0"}}>아직 확정된 경기가 없습니다<br/><span style={{fontSize:11}}>관리자가 MOM을 마감한 경기부터 점수가 반영돼요</span></div>}
+                    {ev.confirmed.length>0&&ev.elig.map(r=>(
+                      <div key={r.id} onClick={()=>openProfile(r.id)} style={{display:"flex",alignItems:"center",gap:10,padding:"11px 0",borderBottom:`1px solid rgba(59,7,100,0.4)`,cursor:"pointer"}}>
+                        <span style={{fontSize:medal(r.rank)?18:14,fontWeight:900,color:C.sub,width:28,textAlign:"center",flexShrink:0}}>{medal(r.rank)||r.rank}</span>
+                        <div style={{flex:1,minWidth:0}}>
+                          <div style={{display:"flex",alignItems:"center",gap:6}}>
+                            <span style={{fontSize:15,fontWeight:700}}>{r.name}</span>
+                            {String(r.id)===String(myId)&&<span style={{background:C.pink+"33",color:C.pink,fontSize:10,fontWeight:700,padding:"1px 6px",borderRadius:10}}>나</span>}
+                          </div>
+                          <div style={{fontSize:11,color:C.sub,marginTop:2}}>{line(r)}</div>
+                        </div>
+                        <span style={{fontSize:22,fontWeight:900,color:r.rank<=3?C.pink:"#fff",flexShrink:0,fontVariantNumeric:"tabular-nums"}}>{fmtPt(r.total)}<span style={{fontSize:11,color:C.sub,fontWeight:400}}>점</span></span>
+                      </div>
+                    ))}
+                    {ev.confirmed.length>0&&ev.inelig.length>0&&(<>
+                      <div style={{fontSize:11,color:C.dim,margin:"14px 0 4px"}}>수상 자격 미달 (참석 {ev.need}경기 미만)</div>
+                      {ev.inelig.map(r=>(
+                        <div key={r.id} onClick={()=>openProfile(r.id)} style={{display:"flex",alignItems:"center",gap:10,padding:"8px 0",borderBottom:`1px solid rgba(59,7,100,0.3)`,cursor:"pointer",opacity:0.6}}>
+                          <span style={{width:28,textAlign:"center",color:C.dim,flexShrink:0}}>-</span>
+                          <div style={{flex:1,minWidth:0}}>
+                            <span style={{fontSize:14,fontWeight:600}}>{r.name}</span>
+                            {String(r.id)===String(myId)&&<span style={{background:C.pink+"33",color:C.pink,fontSize:10,fontWeight:700,padding:"1px 6px",borderRadius:10,marginLeft:6}}>나</span>}
+                            <div style={{fontSize:11,color:C.sub,marginTop:2}}>{line(r)}</div>
+                          </div>
+                          <span style={{fontSize:16,fontWeight:700,flexShrink:0}}>{fmtPt(r.total)}<span style={{fontSize:11,color:C.sub,fontWeight:400}}>점</span></span>
+                        </div>
+                      ))}
+                    </>)}
+                  </div>
+
+                  <div style={glassCard}>
+                    <div style={{fontSize:13,fontWeight:900,marginBottom:10}}>📋 점수 규칙</div>
+                    <div style={{display:"grid",gridTemplateColumns:"1fr auto",rowGap:6,fontSize:13}}>
+                      <span>참석</span><b>{EV_PTS.attend}점</b>
+                      <span>승리 (참석자 전원)</span><b>{EV_PTS.win}점</b>
+                      <span>무승부 · 패배</span><b>0점</b>
+                      <span>골 · 어시스트</span><b>1개당 {EV_PTS.ap}점</b>
+                      <span>MOM 수상</span><b>{EV_PTS.mom}점</b>
+                    </div>
+                    <div style={{fontSize:11,color:C.sub,marginTop:10,lineHeight:1.7}}>
+                      • 공동 MOM은 {EV_PTS.mom}점을 나눠 받음 (2명이면 3점씩)<br/>
+                      • 관리자가 MOM을 마감한 경기만 반영<br/>
+                      • 수상 자격: 기간 내 확정 경기의 50% 이상 참석<br/>
+                      • 동점: 참석 수 → MOM 점수 → 공격포인트 순<br/>
+                      • 참석 등록 후 불참(노쇼)은 마감 전 관리자가 명단에서 제외
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
+            {(!ev||statView!=="event")&&(<>
             {(()=>{
               const top=ranked[0];
               if(!top||top.ap===0)return null;
@@ -689,6 +831,7 @@ function App(){
                 )}
               </div>
             )}
+            </>)}
           </div>
         )}
 
@@ -746,6 +889,28 @@ function App(){
               <div>
                 {!isAdmin?(<div style={{...glassCard,textAlign:"center",padding:"30px 20px"}}><div style={{fontSize:32,marginBottom:12}}>🔒</div><div style={{fontSize:14,fontWeight:700,marginBottom:6}}>관리자 전용</div><div style={{fontSize:12,color:C.sub}}>팀 관리는 관리자만 접근 가능합니다</div></div>):(
                   <>
+                    <div style={{...glassCard,marginBottom:16}}>
+                      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                        <span style={{fontSize:14,fontWeight:900}}>🎁 포인트 이벤트</span>
+                        {!evForm&&<button onClick={()=>setEvForm({name:eventCfg?.name||"",start:eventCfg?.start||"",end:eventCfg?.end||""})} style={{...btnG,flex:"none",padding:"5px 12px",fontSize:12,borderRadius:20}}>{eventCfg?"수정":"설정"}</button>}
+                      </div>
+                      {!evForm&&<div style={{fontSize:12,color:C.sub,marginTop:6}}>{eventCfg?`${eventCfg.name||"포인트 이벤트"} · ${eventCfg.start} ~ ${eventCfg.end}`:"진행 중인 이벤트 없음 (설정 전에는 멤버에게 보이지 않음)"}</div>}
+                      {evForm&&(
+                        <div style={{marginTop:10}}>
+                          <input value={evForm.name} onChange={e=>setEvForm({...evForm,name:e.target.value})} placeholder="이벤트 이름 (예: 겨울 시즌 포인트왕)" style={{...iS,marginBottom:8}}/>
+                          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:8}}>
+                            <div><div style={{fontSize:11,color:C.sub,marginBottom:4}}>시작일</div><input type="date" value={evForm.start} onChange={e=>setEvForm({...evForm,start:e.target.value})} style={iS}/></div>
+                            <div><div style={{fontSize:11,color:C.sub,marginBottom:4}}>종료일</div><input type="date" value={evForm.end} onChange={e=>setEvForm({...evForm,end:e.target.value})} style={iS}/></div>
+                          </div>
+                          {evForm.start&&evForm.end&&evForm.start>evForm.end&&<div style={{fontSize:12,color:C.red,marginBottom:8}}>종료일이 시작일보다 빠릅니다</div>}
+                          <div style={{display:"flex",gap:8}}>
+                            <button onClick={()=>{if(!evForm.start||!evForm.end||evForm.start>evForm.end)return;const v={name:evForm.name.trim()||"포인트 이벤트",start:evForm.start,end:evForm.end};db.ref("event").set(v);addLog(`🎁 이벤트 설정: ${v.name} (${v.start.slice(5).replace("-","/")}~${v.end.slice(5).replace("-","/")})`);setEvForm(null);}} style={{...btnP,flex:2,padding:"10px"}}>저장</button>
+                            <button onClick={()=>setEvForm(null)} style={{...btnG}}>취소</button>
+                          </div>
+                          {eventCfg&&<button onClick={()=>{if(confirm("이벤트를 삭제할까요?\n경기 기록은 그대로 남고, 이벤트 화면만 사라집니다.")){db.ref("event").remove();setEvForm(null);}}} style={{...btnG,width:"100%",marginTop:8,color:C.red,borderColor:C.red+"44"}}>이벤트 삭제</button>}
+                        </div>
+                      )}
+                    </div>
                     <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
                       <span style={{fontSize:13,color:C.sub}}>멤버 목록</span>
                       <div style={{display:"flex",gap:8}}>
