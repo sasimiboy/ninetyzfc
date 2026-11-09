@@ -627,7 +627,6 @@ function App(){
           <button key={m.id} onClick={()=>selectMember(m)} style={{background:"linear-gradient(135deg,rgba(124,58,237,0.15),rgba(168,85,247,0.08))",border:`1px solid rgba(168,85,247,0.25)`,borderRadius:14,padding:"14px 8px",color:"#fff",cursor:"pointer",fontFamily:"inherit",textAlign:"center",backdropFilter:"blur(8px)"}}>
             <div style={{fontSize:13,fontWeight:700}}>{m.name}</div>
             {m.id===ADMIN_ID&&<div style={{fontSize:10,color:C.purple,marginTop:3}}>관리자</div>}
-            {!hasPin(m.id)&&<div style={{fontSize:10,color:C.dim,marginTop:3}}>PIN 미설정</div>}
             {m.status&&m.status!=="정상"&&<div style={{fontSize:10,color:m.status==="부상"?C.red:C.yellow,marginTop:3}}>{m.status}</div>}
           </button>
         ))}
