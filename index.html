@@ -101,6 +101,12 @@ const db = window._db;
 const ADMIN_ID=1,ADMIN_PW="1886";
 // ===== 스탯 이벤트 산식 (공지 내용과 동일하게 유지) =====
 const EV_PTS={attend:6,win:4,draw:0,ap:1,mom:6};
+// 경품 (스탯 이벤트 화면 맨 아래 표시)
+const EV_PRIZES=[
+  {rank:1,item:"풋살화",note:"제품은 구단 살림에 따라 관리자가 정함"},
+  {rank:2,item:"에버랜드 자유이용권 2장",note:"이용 날짜는 관리자와 미리 상의 필요"},
+  {rank:3,item:"기능성 축구 양말 1세트",note:""},
+];
 const COLW=48; // 공격포인트 순위표 숫자 칸 너비 (헤더/행 공통)
 const C={
   bg:"#07000f",card:"#100020",card2:"#180030",
@@ -745,6 +751,19 @@ function App(){
                       • 동점: 참석 수 → MOM 점수 → 공격포인트 순, 모두 같으면 공동 순위<br/>
                       • 참석 등록 후 불참(노쇼)은 마감 전 관리자가 명단에서 제외
                     </div>
+                  </div>
+
+                  <div style={{...glassCard,marginTop:12,border:`1px solid ${C.pink}44`}}>
+                    <div style={{fontSize:13,fontWeight:900,marginBottom:6}}>🎁 경품</div>
+                    {EV_PRIZES.map(z=>(
+                      <div key={z.rank} style={{display:"flex",alignItems:"flex-start",gap:10,padding:"9px 0",borderTop:z.rank>1?"1px solid rgba(168,85,247,0.15)":"none"}}>
+                        <span style={{fontSize:20,lineHeight:1.2,flexShrink:0}}>{z.rank===1?"🥇":z.rank===2?"🥈":"🥉"}</span>
+                        <div style={{minWidth:0}}>
+                          <div style={{fontSize:14,fontWeight:700}}><span style={{color:C.sub,fontWeight:400,marginRight:6}}>{z.rank}등</span>{z.item}</div>
+                          {z.note&&<div style={{fontSize:11,color:C.sub,marginTop:2}}>{z.note}</div>}
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 </div>
               );
