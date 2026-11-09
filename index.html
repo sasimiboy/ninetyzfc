@@ -684,7 +684,41 @@ function App(){
               </div>
             </div>
             {(()=>{const done=matches.filter(m=>m.result);if(!done.length)return null;const w=done.filter(m=>m.result.outcome==="win").length,d=done.filter(m=>m.result.outcome==="draw").length,l=done.filter(m=>m.result.outcome==="lose").length;return(<div style={{...glassCard,marginBottom:12}}><div style={{fontSize:13,color:C.sub,marginBottom:10}}>시즌 전적</div><div style={{display:"flex",gap:24}}>{[[w,C.purple,"승"],[d,C.yellow,"무"],[l,C.red,"패"]].map(([n,c,lb])=>(<div key={lb}><div style={{fontSize:28,fontWeight:900,color:c}}>{n}</div><div style={{fontSize:12,color:C.sub}}>{lb}</div></div>))}</div></div>);})()}
-            {activity.length>0&&(<div style={{...glassCard,marginBottom:12}}><div style={{fontSize:13,color:C.sub,marginBottom:10}}>최근 활동</div>{activity.slice(0,5).map(a=>(<div key={a.id} style={{display:"flex",justifyContent:"space-between",marginBottom:8,fontSize:13}}><span><span style={{color:C.purple,marginRight:6}}>•</span>{a.msg}</span><span style={{color:C.dim,fontSize:11,marginLeft:8,whiteSpace:"nowrap"}}>{relTime(a.ts||a.id)||a.time}</span></div>))}</div>)}
+            {(()=>{
+              const rec=matches.filter(m=>m.result).sort((a,b)=>(b.date+b.time).localeCompare(a.date+a.time)).slice(0,3);
+              if(!rec.length)return null;
+              return(
+                <div style={{...glassCard,marginBottom:12}}>
+                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:4}}>
+                    <span style={{fontSize:13,color:C.sub}}>최근 경기</span>
+                    <button onClick={()=>setTab("match")} style={{background:"none",border:"none",color:C.sub,fontSize:12,cursor:"pointer",fontFamily:"inherit",padding:0}}>전체 보기 ›</button>
+                  </div>
+                  {rec.map((m,i)=>{
+                    const res=m.result;
+                    const g=goals[m.id]||{};
+                    const best=Math.max(0,...members.map(p=>Number(g[p.id])||0));
+                    const scorers=best>0?members.filter(p=>(Number(g[p.id])||0)===best).map(p=>p.name):[];
+                    const momW=m.momClosed?momWinners(m.id).map(k=>memberById[k]?.name).filter(Boolean):[];
+                    return(
+                      <div key={m.id} onClick={()=>setTab("match")} style={{padding:"10px 0",borderTop:i?"1px solid rgba(168,85,247,0.15)":"none",cursor:"pointer"}}>
+                        <div style={{display:"flex",alignItems:"center",gap:10}}>
+                          <span style={{fontSize:12,color:C.sub,width:38,flexShrink:0}}>{m.date.slice(5).replace("-","/")}</span>
+                          <span style={{flex:1,minWidth:0,fontSize:14,fontWeight:700,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{m.opponent?`vs ${m.opponent}`:"상대팀 미정"}</span>
+                          <span style={{fontSize:17,fontWeight:900,color:RC[res.outcome],whiteSpace:"nowrap",fontVariantNumeric:"tabular-nums"}}>{res.our}:{res.opp}</span>
+                          <span style={{flexShrink:0,padding:"1px 8px",borderRadius:20,fontSize:11,fontWeight:900,background:RC[res.outcome]+"22",color:RC[res.outcome],border:`1px solid ${RC[res.outcome]}44`}}>{RL[res.outcome]}</span>
+                        </div>
+                        {(scorers.length>0||momW.length>0)&&(
+                          <div style={{display:"flex",flexWrap:"wrap",gap:10,marginTop:4,paddingLeft:48,fontSize:11,color:C.sub}}>
+                            {scorers.length>0&&<span>⚽ {scorers.join(", ")} {best}골</span>}
+                            {momW.length>0&&<span style={{color:C.yellow}}>🏅 {momW.join(", ")}</span>}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              );
+            })()}
           </div>
         )}
 
@@ -1021,6 +1055,12 @@ function App(){
                         )}
                       </div>))}
                     </div>
+                    {activity.length>0&&(
+                      <div style={{...glassCard,marginTop:16}}>
+                        <div style={{fontSize:13,color:C.sub,marginBottom:10}}>🗒️ 최근 활동 <span style={{fontSize:11,color:C.dim}}>(관리자만 보임)</span></div>
+                        {activity.slice(0,10).map(a=>(<div key={a.id} style={{display:"flex",justifyContent:"space-between",marginBottom:8,fontSize:13}}><span><span style={{color:C.purple,marginRight:6}}>•</span>{a.msg}</span><span style={{color:C.dim,fontSize:11,marginLeft:8,whiteSpace:"nowrap"}}>{relTime(a.ts||a.id)||a.time}</span></div>))}
+                      </div>
+                    )}
                   </>
                 )}
               </div>
