@@ -171,6 +171,56 @@ function wxTips(w){
 function isFuture(match){return new Date(`${match.date}T${match.time||"00:00"}:00+09:00`).getTime()>Date.now();}
 function load(key){try{const s=localStorage.getItem(key);return s?JSON.parse(s):null;}catch(e){return null;}}
 
+// ===== 개인 PIN =====
+// DB에는 PIN 원문이 아니라 해시만 저장 (pins/{멤버id})
+async function pinHash(id,pin){
+  const buf=await crypto.subtle.digest("SHA-256",new TextEncoder().encode(`ninetyz:${id}:${pin}`));
+  return [...new Uint8Array(buf)].map(b=>b.toString(16).padStart(2,"0")).join("");
+}
+// mode: "enter"(입력) | "set"(새로 설정, 두 번 입력) | "legacy"(관리자 기존 비밀번호 확인 후 설정)
+function PinPad({name,mode,onDone,onCancel,cancelLabel}){
+  const [step,setStep]=useState(mode==="set"?"new":mode);
+  const [val,setVal]=useState("");
+  const [first,setFirst]=useState("");
+  const [err,setErr]=useState("");
+  const [busy,setBusy]=useState(false);
+  const title={enter:"PIN 입력",legacy:"기존 관리자 비밀번호 입력",new:"새 PIN 4자리 설정",confirm:"한 번 더 입력"}[step];
+  const sub={enter:"본인 PIN 4자리를 입력하세요",legacy:"확인 후 관리자 PIN을 새로 설정해요",new:"다음부터 이 PIN으로 입장해요",confirm:"확인을 위해 같은 PIN을 입력하세요"}[step];
+  async function finish(v){
+    setBusy(true);
+    const r=await onDone({step,pin:v,first});
+    setBusy(false);
+    if(r&&r.next){setStep(r.next);setFirst(r.first||"");setVal("");setErr(r.err||"");return;}
+    if(r&&r.err){setErr(r.err);setVal("");}
+  }
+  function press(k){
+    if(busy)return;
+    if(k==="del"){setVal(v=>v.slice(0,-1));setErr("");return;}
+    if(val.length>=4)return;
+    const v=val+k;setVal(v);setErr("");
+    if(v.length===4)setTimeout(()=>finish(v),120);
+  }
+  const key={height:56,borderRadius:16,border:"1px solid rgba(168,85,247,0.25)",background:"rgba(60,0,100,0.35)",color:"#fff",fontSize:22,fontWeight:700,cursor:"pointer",fontFamily:"inherit"};
+  return(
+    <div style={{position:"fixed",inset:0,background:"rgba(7,0,15,0.92)",zIndex:999,display:"flex",alignItems:"center",justifyContent:"center",padding:20,backdropFilter:"blur(8px)"}}>
+      <div style={{background:"linear-gradient(135deg,#1a003a,#0e0025)",borderRadius:24,padding:"24px 22px",width:"100%",maxWidth:330,border:"1px solid rgba(168,85,247,0.4)",boxShadow:"0 20px 60px rgba(124,58,237,0.3)"}}>
+        <div style={{fontSize:13,color:C.sub,textAlign:"center"}}>🔐 {name}</div>
+        <div style={{fontSize:17,fontWeight:900,textAlign:"center",marginTop:6}}>{title}</div>
+        <div style={{fontSize:12,color:C.sub,textAlign:"center",marginTop:4,minHeight:16}}>{sub}</div>
+        <div style={{display:"flex",justifyContent:"center",gap:14,margin:"20px 0 8px"}}>
+          {[0,1,2,3].map(i=><div key={i} style={{width:16,height:16,borderRadius:"50%",background:i<val.length?C.purple:"transparent",border:`2px solid ${err?C.red:C.purple}`,boxShadow:i<val.length?"0 0 10px rgba(192,132,252,0.7)":"none"}}/>)}
+        </div>
+        <div style={{fontSize:12,color:C.red,textAlign:"center",minHeight:18,marginBottom:8}}>{err}</div>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8}}>
+          {["1","2","3","4","5","6","7","8","9","","0","del"].map((k,i)=>k===""?<div key={i}/>:
+            <button key={i} onClick={()=>press(k)} style={{...key,fontSize:k==="del"?18:22}}>{k==="del"?"⌫":k}</button>)}
+        </div>
+        {onCancel&&<button onClick={onCancel} style={{width:"100%",marginTop:14,background:"none",border:"none",color:C.sub,fontSize:13,cursor:"pointer",fontFamily:"inherit"}}>{cancelLabel||"취소"}</button>}
+      </div>
+    </div>
+  );
+}
+
 function StatusBadge({status}){
   const col=status==="정상"?C.purple:status==="부상"?C.red:C.yellow;
   return <span style={{padding:"2px 8px",borderRadius:20,fontSize:11,fontWeight:700,background:col+"22",color:col,border:`1px solid ${col}44`}}>{status}</span>;
@@ -255,10 +305,8 @@ function App(){
   const [goals,setGoals]=useState({});
   const [activity,setActivity]=useState([]);
   const [user,setUser]=useState(load("nfc_user")||null);
-  const [pwModal,setPwModal]=useState(false);
-  const [pwInput,setPwInput]=useState("");
-  const [pwErr,setPwErr]=useState(false);
-  const [pendId,setPendId]=useState(null);
+  const [pins,setPins]=useState({});
+  const [pinFor,setPinFor]=useState(null); // 로그인 화면에서 PIN 입력 중인 멤버
   const [tab,setTab]=useState("home");
   const [editMember,setEditMember]=useState(null);
   const [editCustom,setEditCustom]=useState("");
@@ -286,7 +334,7 @@ function App(){
   const myId=user?.id;
 
   useEffect(()=>{
-    let done={members:false,matches:false,goals:false,assists:false,actLog:false,mom:false,attendance:false,event:false};
+    let done={members:false,matches:false,goals:false,assists:false,actLog:false,mom:false,attendance:false,event:false,pins:false};
     function chk(){if(Object.values(done).every(Boolean))setLoading(false);}
     db.ref("members").on("value",s=>{const v=s.val();if(v)setMembers(toKeyed(v));else db.ref("members").set(INIT_MEMBERS);done.members=true;chk();});
     db.ref("matches").on("value",s=>{setMatches(toKeyed(s.val()));done.matches=true;chk();});
@@ -295,9 +343,10 @@ function App(){
     db.ref("actLog").on("value",s=>{const a=toArr(s.val()).sort((x,y)=>(y.ts||y.id||0)-(x.ts||x.id||0));setActivity(a);done.actLog=true;chk();});
     db.ref("mom").on("value",s=>{setMom(s.val()||{});done.mom=true;chk();});
     db.ref("attendance").on("value",s=>{setAttendance(s.val()||{});done.attendance=true;chk();});
+    db.ref("pins").on("value",s=>{setPins(s.val()||{});done.pins=true;chk();});
     db.ref("event").on("value",s=>{const v=s.val();setEventCfg(v&&v.start&&v.end?v:null);done.event=true;chk();});
     const t=setInterval(()=>setTick(x=>x+1),60000);
-    return()=>{clearInterval(t);["members","matches","goals","assists","actLog","mom","attendance","event"].forEach(k=>db.ref(k).off());};
+    return()=>{clearInterval(t);["members","matches","goals","assists","actLog","mom","attendance","event","pins"].forEach(k=>db.ref(k).off());};
   },[]);
 
   // 날씨: 30분 캐시, 실패하면 날씨 영역만 숨김
@@ -310,8 +359,23 @@ function App(){
 
   // 트랜잭션: 동시에 여러 명이 기록해도 서로 덮어쓰지 않음
   function addLog(msg){const now=Date.now();db.ref("actLog").transaction(cur=>[{id:now,ts:now,msg},...toArr(cur).slice(0,19)]);}
-  function selectMember(m){if(m.id===ADMIN_ID){setPendId(m.id);setPwModal(true);setPwInput("");setPwErr(false);}else setUser({id:m.id,name:m.name,isAdmin:false});}
-  function submitPw(){if(pwInput===ADMIN_PW){const m=members.find(x=>x.id===pendId);setUser({id:pendId,name:m.name,isAdmin:true});setPwModal(false);setPwInput("");setPwErr(false);}else setPwErr(true);}
+  const hasPin=id=>!!(pins&&pins[id]);
+  function pinModeFor(m){return hasPin(m.id)?"enter":m.id===ADMIN_ID?"legacy":"set";}
+  function selectMember(m){setPinFor(m);}
+  // PinPad 단계 처리: 성공 시 로그인/저장, 실패 시 에러 메시지
+  async function handlePin(m,{step,pin,first},onSuccess){
+    if(step==="enter"){
+      return (await pinHash(m.id,pin))===pins[m.id]?onSuccess():{err:"PIN이 맞지 않아요"};
+    }
+    if(step==="legacy")return pin===ADMIN_PW?{next:"new"}:{err:"비밀번호가 맞지 않아요"};
+    if(step==="new")return{next:"confirm",first:pin};
+    if(step==="confirm"){
+      if(pin!==first)return{next:"new",err:"두 번 입력한 PIN이 달라요. 처음부터 다시 입력하세요"};
+      await db.ref(`pins/${m.id}`).set(await pinHash(m.id,pin));
+      return onSuccess();
+    }
+  }
+  function loginAs(m){setUser({id:m.id,name:m.name,isAdmin:m.id===ADMIN_ID});setPinFor(null);}
 
   // 존재하는 경기의 기록만 합산 (삭제된 경기의 잔여 기록 제외)
   const matchIds=new Set(matches.map(m=>String(m.id)));
@@ -549,33 +613,21 @@ function App(){
 
   if(!user)return(
     <div style={{background:C.bg,minHeight:"100vh",padding:24,maxWidth:480,margin:"0 auto"}}>
-      {pwModal&&(
-        <div style={{position:"fixed",inset:0,background:"rgba(7,0,15,0.9)",zIndex:999,display:"flex",alignItems:"center",justifyContent:"center",padding:20,backdropFilter:"blur(8px)"}}>
-          <div style={{background:"linear-gradient(135deg,#1a003a,#0e0025)",borderRadius:24,padding:28,width:"100%",maxWidth:320,border:`1px solid rgba(168,85,247,0.4)`,boxShadow:`0 20px 60px rgba(124,58,237,0.3)`}}>
-            <div style={{fontSize:22,textAlign:"center",marginBottom:8}}>🔐</div>
-            <div style={{fontSize:16,fontWeight:900,textAlign:"center",marginBottom:4}}>관리자 확인</div>
-            <div style={{fontSize:12,color:C.sub,textAlign:"center",marginBottom:20}}>비밀번호 입력</div>
-            <input type="password" value={pwInput} onChange={e=>{setPwInput(e.target.value);setPwErr(false);}} onKeyDown={e=>e.key==="Enter"&&submitPw()} autoFocus style={{...iS,textAlign:"center",fontSize:20,letterSpacing:6,marginBottom:8}}/>
-            {pwErr&&<div style={{fontSize:12,color:C.red,textAlign:"center",marginBottom:8}}>비밀번호가 틀렸습니다</div>}
-            <div style={{display:"flex",gap:8,marginTop:4}}>
-              <button onClick={()=>{setPwModal(false);setPwInput("");setPwErr(false);}} style={{...btnG}}>취소</button>
-              <button onClick={submitPw} style={{...btnP,flex:1,padding:"10px"}}>확인</button>
-            </div>
-          </div>
-        </div>
-      )}
+      {pinFor&&<PinPad key={pinFor.id} name={pinFor.name} mode={pinModeFor(pinFor)} onDone={r=>handlePin(pinFor,r,()=>loginAs(pinFor))} onCancel={()=>setPinFor(null)}/>}
       <div style={{textAlign:"center",marginBottom:32,paddingTop:20}}>
         <div style={{width:80,height:80,borderRadius:"50%",overflow:"hidden",margin:"0 auto 16px",boxShadow:`0 0 40px rgba(168,85,247,0.5)`,border:`2px solid rgba(168,85,247,0.4)`}}>
           <img src={LOGO_SRC} style={{width:"100%",height:"100%",objectFit:"cover"}}/>
         </div>
         <div style={{fontSize:26,fontWeight:900,background:`linear-gradient(90deg,${C.purple},${C.pink})`,WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent"}}>Ninetyz FC</div>
-        <div style={{fontSize:13,color:C.sub,marginTop:6}}>이름을 눌러 입장하세요</div>
+        <div style={{fontSize:13,color:C.sub,marginTop:6}}>이름을 누르고 PIN을 입력하세요</div>
+        <div style={{fontSize:11,color:C.dim,marginTop:4}}>처음이면 PIN 4자리를 새로 만들어요 · 잊으면 관리자에게 초기화 요청</div>
       </div>
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:10}}>
         {members.map(m=>(
           <button key={m.id} onClick={()=>selectMember(m)} style={{background:"linear-gradient(135deg,rgba(124,58,237,0.15),rgba(168,85,247,0.08))",border:`1px solid rgba(168,85,247,0.25)`,borderRadius:14,padding:"14px 8px",color:"#fff",cursor:"pointer",fontFamily:"inherit",textAlign:"center",backdropFilter:"blur(8px)"}}>
             <div style={{fontSize:13,fontWeight:700}}>{m.name}</div>
-            {m.id===ADMIN_ID&&<div style={{fontSize:10,color:C.purple,marginTop:3}}>🔐 관리자</div>}
+            {m.id===ADMIN_ID&&<div style={{fontSize:10,color:C.purple,marginTop:3}}>관리자</div>}
+            {!hasPin(m.id)&&<div style={{fontSize:10,color:C.dim,marginTop:3}}>PIN 미설정</div>}
             {m.status&&m.status!=="정상"&&<div style={{fontSize:10,color:m.status==="부상"?C.red:C.yellow,marginTop:3}}>{m.status}</div>}
           </button>
         ))}
@@ -583,8 +635,11 @@ function App(){
     </div>
   );
 
+  const meMember=members.find(m=>String(m.id)===String(user.id));
+  const needPinSetup=meMember&&!hasPin(meMember.id);
   return(
     <div style={{background:C.bg,minHeight:"100vh",maxWidth:480,margin:"0 auto",color:"#fff",position:"relative"}}>
+      {needPinSetup&&<PinPad key={"setup"+meMember.id} name={meMember.name} mode="set" onDone={r=>handlePin(meMember,r,()=>({}))} onCancel={()=>setUser(null)} cancelLabel="로그아웃"/>}
       <div style={{background:"linear-gradient(180deg,rgba(124,58,237,0.3),rgba(7,0,15,0.9))",padding:"16px",borderBottom:`1px solid rgba(168,85,247,0.2)`,position:"sticky",top:0,zIndex:100,backdropFilter:"blur(12px)",WebkitBackdropFilter:"blur(12px)"}}>
         <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
           <div style={{display:"flex",alignItems:"center",gap:12}}>
@@ -946,6 +1001,7 @@ function App(){
                           {m.id===ADMIN_ID&&<span style={{background:C.purple+"33",color:C.purple,fontSize:10,fontWeight:700,padding:"1px 6px",borderRadius:10}}>관리자</span>}
                           {m.id===myId&&<span style={{background:C.pink+"33",color:C.pink,fontSize:10,fontWeight:700,padding:"1px 6px",borderRadius:10}}>나</span>}
                           {m.status&&m.status!=="정상"&&<StatusBadge status={m.status}/>}
+                          <span style={{fontSize:10,fontWeight:700,padding:"1px 6px",borderRadius:10,color:hasPin(m.id)?C.sub:C.dim,background:"rgba(60,0,100,0.45)"}}>{hasPin(m.id)?"🔒 PIN":"PIN 없음"}</span>
                         </div>
                         <button onClick={()=>{if(editMember===m.id)setEditMember(null);else{setEditMember(m.id);setEditCustom(m.customStatus||"");}}} style={{background:"rgba(60,0,100,0.4)",border:`1px solid ${C.border}`,borderRadius:10,padding:"4px 12px",color:C.sub,fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>{editMember===m.id?"닫기":"수정"}</button>
                         </div>
@@ -960,7 +1016,8 @@ function App(){
                               <input value={editCustom} onChange={e=>setEditCustom(e.target.value)} placeholder="메모 직접입력 (예: 12월 복귀)" style={{...iS,flex:1}}/>
                               <button onClick={()=>db.ref(`members/${m._k}`).update({customStatus:editCustom.trim()})} style={{...btnP,width:"auto",padding:"10px 14px"}}>적용</button>
                             </div>
-                            {m.id!==ADMIN_ID&&<button onClick={()=>{if(confirm(`${m.name}님을 삭제할까요?`)){db.ref(`members/${m._k}`).remove();addLog(`멤버 삭제: ${m.name}`);setEditMember(null);}}} style={{...btnG,width:"100%",color:C.red,borderColor:C.red+"44"}}>멤버 삭제</button>}
+                            {hasPin(m.id)&&<button onClick={()=>{if(confirm(`${m.name}님의 PIN을 초기화할까요?\n다음 로그인 때 새 PIN을 직접 설정해요.`)){db.ref(`pins/${m.id}`).remove();addLog(`${m.name} PIN 초기화`);}}} style={{...btnG,width:"100%",marginBottom:m.id!==ADMIN_ID?8:0}}>🔑 PIN 초기화</button>}
+                            {m.id!==ADMIN_ID&&<button onClick={()=>{if(confirm(`${m.name}님을 삭제할까요?`)){db.ref(`members/${m._k}`).remove();db.ref(`pins/${m.id}`).remove();addLog(`멤버 삭제: ${m.name}`);setEditMember(null);}}} style={{...btnG,width:"100%",color:C.red,borderColor:C.red+"44"}}>멤버 삭제</button>}
                           </div>
                         )}
                       </div>))}
