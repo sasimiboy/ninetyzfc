@@ -99,7 +99,7 @@ const {useState,useEffect,useRef} = React;
 const db = window._db;
 
 const ADMIN_ID=1,ADMIN_PW="1886";
-// ===== 포인트 이벤트 산식 (공지 내용과 동일하게 유지) =====
+// ===== 스탯 이벤트 산식 (공지 내용과 동일하게 유지) =====
 const EV_PTS={attend:6,win:4,draw:0,ap:1,mom:6};
 const COLW=48; // 공격포인트 순위표 숫자 칸 너비 (헤더/행 공통)
 const C={
@@ -360,7 +360,7 @@ function App(){
     backdropFilter:"blur(10px)",WebkitBackdropFilter:"blur(10px)"
   };
 
-  // ===== 포인트 이벤트 계산 =====
+  // ===== 스탯 이벤트 계산 =====
   // 반영 경기: 기간 안 + 결과 입력 + 관리자가 MOM 마감한 경기
   const fmtPt=n=>Number.isInteger(n)?String(n):n.toFixed(1);
   const ev=(()=>{
@@ -601,7 +601,7 @@ function App(){
             {ev&&!ev.ended&&(
               <div onClick={()=>{setStatView("event");setTab("stats");}} style={{...glassCard,marginBottom:12,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"space-between",gap:10,border:`1px solid ${C.pink}55`}}>
                 <div style={{minWidth:0}}>
-                  <div style={{fontSize:14,fontWeight:900}}>🎁 {ev.cfg.name||"포인트 이벤트"} {ev.active?"진행중":"예정"}</div>
+                  <div style={{fontSize:14,fontWeight:900}}>🎁 {ev.cfg.name||"스탯 이벤트"} {ev.active?"진행중":"예정"}</div>
                   <div style={{fontSize:11,color:C.sub,marginTop:3}}>{ev.cfg.start.slice(5).replace("-","/")} ~ {ev.cfg.end.slice(5).replace("-","/")} · 확정 {ev.confirmed.length}경기</div>
                 </div>
                 <div style={{textAlign:"right",flexShrink:0}}>
@@ -669,7 +669,7 @@ function App(){
           <div>
             {ev&&(
               <div style={{display:"flex",background:"rgba(60,0,100,0.3)",borderRadius:14,padding:4,marginBottom:16,gap:4,border:`1px solid ${C.border}`}}>
-                {[["event","🎁 포인트 이벤트"],["ap","🏆 공격포인트"]].map(([k,l])=>(
+                {[["event","🎁 스탯 이벤트"],["ap","🏆 공격포인트"]].map(([k,l])=>(
                   <button key={k} onClick={()=>setStatView(k)} style={{flex:1,background:statView===k?`linear-gradient(135deg,${C.purple2},${C.purple})`:"transparent",border:"none",borderRadius:10,padding:"9px 0",color:statView===k?"#fff":C.sub,fontWeight:statView===k?700:400,fontSize:13,cursor:"pointer",fontFamily:"inherit"}}>{l}</button>
                 ))}
               </div>
@@ -683,7 +683,7 @@ function App(){
                   <div style={{...glassCard,marginBottom:12}}>
                     <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:8}}>
                       <div>
-                        <div style={{fontSize:17,fontWeight:900}}>🎁 {ev.cfg.name||"포인트 이벤트"}</div>
+                        <div style={{fontSize:17,fontWeight:900}}>🎁 {ev.cfg.name||"스탯 이벤트"}</div>
                         <div style={{fontSize:12,color:C.sub,marginTop:4}}>{md(ev.cfg.start)} ~ {md(ev.cfg.end)} · 확정 {ev.confirmed.length}경기{ev.pending.length?` · 대기 ${ev.pending.length}경기`:""}</div>
                       </div>
                       <span style={{flexShrink:0,padding:"3px 10px",borderRadius:20,fontSize:11,fontWeight:900,background:ev.ended?C.dim+"33":C.purple+"22",color:ev.ended?C.sub:C.purple,border:`1px solid ${ev.ended?C.dim:C.purple}44`}}>{ev.ended?"종료":ev.active?"진행중":"예정"}</span>
@@ -739,10 +739,10 @@ function App(){
                       <span>MOM 수상</span><b>{EV_PTS.mom}점</b>
                     </div>
                     <div style={{fontSize:11,color:C.sub,marginTop:10,lineHeight:1.7}}>
-                      • 공동 MOM은 {EV_PTS.mom}점을 나눠 받음 (2명이면 3점씩)<br/>
+                      • MOM은 그 경기 참석자끼리 투표 (본인 제외), 공동 MOM은 {EV_PTS.mom}점을 나눠 받음 (2명이면 3점씩)<br/>
                       • 관리자가 MOM을 마감한 경기만 반영<br/>
-                      • 수상 자격: 기간 내 확정 경기의 50% 이상 참석<br/>
-                      • 동점: 참석 수 → MOM 점수 → 공격포인트 순<br/>
+                      • 수상 자격: 기간 내 확정 경기의 50% 이상 참석 (확정 경기가 늘면 기준도 늘어남)<br/>
+                      • 동점: 참석 수 → MOM 점수 → 공격포인트 순, 모두 같으면 공동 순위<br/>
                       • 참석 등록 후 불참(노쇼)은 마감 전 관리자가 명단에서 제외
                     </div>
                   </div>
@@ -891,20 +891,20 @@ function App(){
                   <>
                     <div style={{...glassCard,marginBottom:16}}>
                       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-                        <span style={{fontSize:14,fontWeight:900}}>🎁 포인트 이벤트</span>
+                        <span style={{fontSize:14,fontWeight:900}}>🎁 스탯 이벤트</span>
                         {!evForm&&<button onClick={()=>setEvForm({name:eventCfg?.name||"",start:eventCfg?.start||"",end:eventCfg?.end||""})} style={{...btnG,flex:"none",padding:"5px 12px",fontSize:12,borderRadius:20}}>{eventCfg?"수정":"설정"}</button>}
                       </div>
-                      {!evForm&&<div style={{fontSize:12,color:C.sub,marginTop:6}}>{eventCfg?`${eventCfg.name||"포인트 이벤트"} · ${eventCfg.start} ~ ${eventCfg.end}`:"진행 중인 이벤트 없음 (설정 전에는 멤버에게 보이지 않음)"}</div>}
+                      {!evForm&&<div style={{fontSize:12,color:C.sub,marginTop:6}}>{eventCfg?`${eventCfg.name||"스탯 이벤트"} · ${eventCfg.start} ~ ${eventCfg.end}`:"진행 중인 이벤트 없음 (설정 전에는 멤버에게 보이지 않음)"}</div>}
                       {evForm&&(
                         <div style={{marginTop:10}}>
-                          <input value={evForm.name} onChange={e=>setEvForm({...evForm,name:e.target.value})} placeholder="이벤트 이름 (예: 겨울 시즌 포인트왕)" style={{...iS,marginBottom:8}}/>
+                          <input value={evForm.name} onChange={e=>setEvForm({...evForm,name:e.target.value})} placeholder="이벤트 이름 (예: 겨울 시즌 스탯왕)" style={{...iS,marginBottom:8}}/>
                           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:8}}>
                             <div><div style={{fontSize:11,color:C.sub,marginBottom:4}}>시작일</div><input type="date" value={evForm.start} onChange={e=>setEvForm({...evForm,start:e.target.value})} style={iS}/></div>
                             <div><div style={{fontSize:11,color:C.sub,marginBottom:4}}>종료일</div><input type="date" value={evForm.end} onChange={e=>setEvForm({...evForm,end:e.target.value})} style={iS}/></div>
                           </div>
                           {evForm.start&&evForm.end&&evForm.start>evForm.end&&<div style={{fontSize:12,color:C.red,marginBottom:8}}>종료일이 시작일보다 빠릅니다</div>}
                           <div style={{display:"flex",gap:8}}>
-                            <button onClick={()=>{if(!evForm.start||!evForm.end||evForm.start>evForm.end)return;const v={name:evForm.name.trim()||"포인트 이벤트",start:evForm.start,end:evForm.end};db.ref("event").set(v);addLog(`🎁 이벤트 설정: ${v.name} (${v.start.slice(5).replace("-","/")}~${v.end.slice(5).replace("-","/")})`);setEvForm(null);}} style={{...btnP,flex:2,padding:"10px"}}>저장</button>
+                            <button onClick={()=>{if(!evForm.start||!evForm.end||evForm.start>evForm.end)return;const v={name:evForm.name.trim()||"스탯 이벤트",start:evForm.start,end:evForm.end};db.ref("event").set(v);addLog(`🎁 이벤트 설정: ${v.name} (${v.start.slice(5).replace("-","/")}~${v.end.slice(5).replace("-","/")})`);setEvForm(null);}} style={{...btnP,flex:2,padding:"10px"}}>저장</button>
                             <button onClick={()=>setEvForm(null)} style={{...btnG}}>취소</button>
                           </div>
                           {eventCfg&&<button onClick={()=>{if(confirm("이벤트를 삭제할까요?\n경기 기록은 그대로 남고, 이벤트 화면만 사라집니다.")){db.ref("event").remove();setEvForm(null);}}} style={{...btnG,width:"100%",marginTop:8,color:C.red,borderColor:C.red+"44"}}>이벤트 삭제</button>}
