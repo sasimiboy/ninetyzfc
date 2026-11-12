@@ -20,7 +20,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Barlow+Condensed:wght@900&family=Noto+Sans+KR:wght@400;500;700;900&display=swap" rel="stylesheet"/>
   <style>
     *{margin:0;padding:0;box-sizing:border-box;}
-    body{background:#07000f;font-family:'Noto Sans KR',sans-serif;color:#fff;}
+    body{background:#07000f;font-family:'Noto Sans KR',sans-serif,'Apple Color Emoji','Segoe UI Emoji','Noto Color Emoji';color:#fff;}
     input[type=date]::-webkit-calendar-picker-indicator,
     input[type=time]::-webkit-calendar-picker-indicator{filter:invert(1);}
     ::-webkit-scrollbar{width:0;}
@@ -145,7 +145,7 @@ function bump(path,d){db.ref(path).transaction(c=>Math.max(0,(Number(c)||0)+d));
 // 경기장이 모두 서울 시내(도곡·용산·잠실)라 서울 한 지점 예보 사용
 const WX_URL="https://api.open-meteo.com/v1/forecast?latitude=37.51&longitude=127.02&hourly=temperature_2m,apparent_temperature,precipitation_probability,weather_code,wind_speed_10m&wind_speed_unit=ms&timezone=Asia%2FSeoul&forecast_days=16";
 function wxDesc(c){
-  if(c===0)return["☀️","맑음"];if(c===1)return["🌤️","대체로 맑음"];if(c===2)return["⛅","구름 조금"];if(c===3)return["☁️","흐림"];
+  if(c===0)return["☀️","맑음"];if(c===1)return["🌤️","대체로 맑음"];if(c===2)return["⛅️","구름 조금"];if(c===3)return["☁️","흐림"];
   if(c===45||c===48)return["🌫️","안개"];if(c>=51&&c<=57)return["🌦️","이슬비"];if(c>=61&&c<=67)return["🌧️","비"];
   if(c>=71&&c<=77)return["🌨️","눈"];if(c>=80&&c<=82)return["🌦️","소나기"];if(c===85||c===86)return["🌨️","눈 소나기"];if(c>=95)return["⛈️","뇌우"];
   return["🌡️","-"];
@@ -161,7 +161,7 @@ function matchWx(wx,match){
 }
 function wxTips(w){
   const t=[];
-  if(w.pop>=60)t.push("☔ 비 예보 · 우천 진행 여부 확인");
+  if(w.pop>=60)t.push("☔️ 비 예보 · 우천 진행 여부 확인");
   else if(w.pop>=30)t.push("🌂 비 올 수 있음");
   if(w.feel<=0)t.push("🧤 체감 영하 · 방한 준비");
   if(w.feel>=30)t.push("🥵 더위 주의 · 물 충분히");
@@ -693,7 +693,7 @@ function App(){
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:14}}>
               <div style={{background:`linear-gradient(135deg,rgba(232,121,249,0.2),rgba(192,132,252,0.08))`,border:`1px solid rgba(232,121,249,0.3)`,borderRadius:16,padding:"14px 12px",backdropFilter:"blur(8px)"}}>
                 <div style={{fontSize:11,color:C.pink,fontWeight:700,marginBottom:6}}>다음 경기</div>
-                {nextMatch?(<><div style={{fontSize:15,fontWeight:900}}>{nextMatch.date.slice(5).replace("-","/")}</div>{nextMatch.opponent&&<div style={{fontSize:11,color:C.sub,marginTop:3}}>vs {nextMatch.opponent}</div>}{(()=>{const w=matchWx(wx,nextMatch);if(!w)return null;const[ic,lb]=wxDesc(w.code);return <div style={{fontSize:12,marginTop:5,fontWeight:700}}>{ic} {w.t}° <span style={{color:C.sub,fontWeight:400,fontSize:11}}>{lb}{w.pop>=30?` · ☔${w.pop}%`:""}</span></div>;})()}</>):<div style={{fontSize:13,color:C.sub,marginTop:6}}>일정 없음</div>}
+                {nextMatch?(<><div style={{fontSize:15,fontWeight:900}}>{nextMatch.date.slice(5).replace("-","/")}</div>{nextMatch.opponent&&<div style={{fontSize:11,color:C.sub,marginTop:3}}>vs {nextMatch.opponent}</div>}{(()=>{const w=matchWx(wx,nextMatch);if(!w)return null;const[ic,lb]=wxDesc(w.code);return <div style={{fontSize:12,marginTop:5,fontWeight:700}}>{ic} {w.t}° <span style={{color:C.sub,fontWeight:400,fontSize:11}}>{lb}{w.pop>=30?` · ☔️${w.pop}%`:""}</span></div>;})()}</>):<div style={{fontSize:13,color:C.sub,marginTop:6}}>일정 없음</div>}
               </div>
               <div style={{background:`linear-gradient(135deg,rgba(124,58,237,0.2),rgba(109,40,217,0.08))`,border:`1px solid rgba(124,58,237,0.3)`,borderRadius:16,padding:"14px 12px",backdropFilter:"blur(8px)"}}>
                 <div style={{fontSize:11,color:C.purple2,fontWeight:700,marginBottom:6}}>멤버 현황</div>
@@ -727,7 +727,7 @@ function App(){
                         </div>
                         {(scorers.length>0||momW.length>0)&&(
                           <div style={{display:"flex",flexWrap:"wrap",gap:10,marginTop:4,paddingLeft:48,fontSize:11,color:C.sub}}>
-                            {scorers.length>0&&<span>⚽ {scorers.join(", ")} {best}골</span>}
+                            {scorers.length>0&&<span>⚽️ {scorers.join(", ")} {best}골</span>}
                             {momW.length>0&&<span style={{color:C.yellow}}>🏅 {momW.join(", ")}</span>}
                           </div>
                         )}
@@ -888,7 +888,7 @@ function App(){
             <div style={{fontSize:11,color:C.dim,marginBottom:12}}>이름을 누르면 개인 기록을 볼 수 있어요</div>
             <div style={glassCard}>
               <div style={{display:"flex",justifyContent:"flex-end",paddingBottom:8,borderBottom:`1px solid rgba(59,7,100,0.6)`,marginBottom:4}}>
-                <span style={{fontSize:11,color:C.sub,width:COLW,flexShrink:0,textAlign:"center",whiteSpace:"nowrap"}}>⚽ 골</span>
+                <span style={{fontSize:11,color:C.sub,width:COLW,flexShrink:0,textAlign:"center",whiteSpace:"nowrap"}}>⚽️ 골</span>
                 <span style={{fontSize:11,color:C.sub,width:COLW,flexShrink:0,textAlign:"center",whiteSpace:"nowrap"}}>🅰️ 어시</span>
                 <span style={{fontSize:11,color:C.purple,fontWeight:700,width:COLW,flexShrink:0,textAlign:"center",whiteSpace:"nowrap"}}>합계</span>
               </div>
@@ -927,7 +927,7 @@ function App(){
                 {goalMatch&&(
                   <div>
                     <div style={{display:"flex",justifyContent:"flex-end",gap:8,marginBottom:6,paddingRight:2}}>
-                      <span style={{fontSize:11,color:C.sub,minWidth:80,textAlign:"center"}}>⚽ 골</span>
+                      <span style={{fontSize:11,color:C.sub,minWidth:80,textAlign:"center"}}>⚽️ 골</span>
                       <span style={{fontSize:11,color:"#60a5fa",minWidth:80,textAlign:"center"}}>🅰️ 어시스트</span>
                     </div>
                     {members.map(m=>{
@@ -984,7 +984,7 @@ function App(){
               </div>
               <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:8,marginBottom:14}}>
                 {stat(matches.filter(mt=>isAttending(mt.id,p.id)).length,"👥 참석",C.pink)}
-                {stat(p.g,"⚽ 골",C.purple)}
+                {stat(p.g,"⚽️ 골",C.purple)}
                 {stat(p.a,"🅰️ 어시","#60a5fa")}
                 {stat(p.mom,"🏅 MOM",C.yellow)}
               </div>
@@ -998,7 +998,7 @@ function App(){
                       {mt.result&&<span style={{fontSize:11,fontWeight:900,color:RC[mt.result.outcome]}}>{RL[mt.result.outcome]}</span>}
                     </div>
                     <div style={{display:"flex",gap:8,flexShrink:0,fontWeight:700}}>
-                      {g>0&&<span style={{color:C.purple}}>⚽{g}</span>}
+                      {g>0&&<span style={{color:C.purple}}>⚽️{g}</span>}
                       {a>0&&<span style={{color:"#60a5fa"}}>🅰️{a}</span>}
                       {isMom&&<span style={{color:C.yellow}}>🏅</span>}
                     </div>
@@ -1088,7 +1088,7 @@ function App(){
       </div>
 
       <div style={{position:"fixed",bottom:0,left:"50%",transform:"translateX(-50%)",width:"100%",maxWidth:480,background:"rgba(7,0,15,0.95)",borderTop:`1px solid rgba(168,85,247,0.25)`,display:"flex",padding:"6px 0 10px",zIndex:100,backdropFilter:"blur(12px)",WebkitBackdropFilter:"blur(12px)"}}>
-        {[["home","⚽","홈"],["match","📅","경기"],["stats","🏆","스탯"],["my","👤","MY"],...(isAdmin?[["manage","📋","관리"]]:[])].map(([key,icon,label])=>{
+        {[["home","⚽️","홈"],["match","📅","경기"],["stats","🏆","스탯"],["my","👤","MY"],...(isAdmin?[["manage","📋","관리"]]:[])].map(([key,icon,label])=>{
           const active=key==="my"?(tab==="player"&&String(viewId)===String(myId)):key==="stats"?(tab==="stats"||(tab==="player"&&String(viewId)!==String(myId))):tab===key;
           return(
           <button key={key} onClick={()=>key==="my"?openProfile(myId):setTab(key)} style={{flex:1,background:"none",border:"none",cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",gap:2,padding:"4px 0"}}>
